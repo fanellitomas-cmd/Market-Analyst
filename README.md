@@ -6,8 +6,9 @@ activos contra el S&P 500 (beta, correlación, volatilidad, caídas). Todo con f
 
 | Sección | Qué muestra | Fuente |
 |---|---|---|
-| **Panorama** | Último dato anual de PBI, crecimiento, PBI per cápita, inflación, desempleo, cuenta corriente y deuda, por país | Banco Mundial |
-| **Macro** | Series históricas por indicador, comparando hasta 8 países (EE.UU., Canadá, Argentina, Brasil, México, Chile, Zona Euro, Alemania, Francia, Italia, Reino Unido, Japón, China) | Banco Mundial |
+| **Panorama** | EE.UU. de un vistazo (Fed, 10 años, pendiente, inflación, desempleo, VIX) y último dato anual de PBI, crecimiento, PBI per cápita, inflación, desempleo, cuenta corriente y deuda, por país | Banco Mundial |
+| **EE.UU.** | Fed, bonos del Tesoro (3M a 30A), pendientes 10A−2A y 10A−3M, hipotecas, inflación (IPC, núcleo, PCE núcleo, esperada), desempleo, empleos creados, pedidos de desempleo, PBI, VIX, spread high yield, dólar y petróleo. Historia de cada serie y curva de rendimientos hoy / hace 1 mes / hace 1 año | FRED (Reserva Federal de St. Louis) |
+| **Macro global** | Series históricas por indicador, comparando hasta 8 países (EE.UU., Canadá, Argentina, Brasil, México, Chile, Zona Euro, Alemania, Francia, Italia, Reino Unido, Japón, China) | Banco Mundial |
 | **Mercados** | Beta, correlación, R², rendimiento, volatilidad anualizada y caída máxima contra un benchmark (SPY, QQQ, IWM, EEM, ACWI); correlación y beta móviles; comparación de hasta 15 activos | Yahoo Finance |
 
 ## Principio: cero dato inventado
@@ -21,9 +22,9 @@ correlación quedan como "no disponible" en lugar de mostrar una cifra poco conf
 
 ```
 backend/    API en Python (FastAPI)
-  app/sources/    clientes de Banco Mundial y Yahoo Finance
-  app/services/   macro.py (catálogo de países e indicadores), quant.py (fórmulas), markets.py
-  app/api/        endpoints /api/auth, /api/macro, /api/markets
+  app/sources/    clientes de Banco Mundial, FRED y Yahoo Finance
+  app/services/   macro.py (países), us_macro.py (FRED), quant.py (fórmulas), markets.py
+  app/api/        endpoints /api/auth, /api/macro, /api/us, /api/markets
   tests/          tests con respuestas simuladas (no salen a la red)
 frontend/   sitio en Next.js (App Router) + Recharts
 ```
@@ -68,6 +69,9 @@ cd frontend && npm run typecheck && npm run build
 ## Notas sobre las fuentes
 
 - **Banco Mundial**: datos anuales, publicados con 1–2 años de rezago. Se cachean 6 horas.
+- **FRED**: se usa la descarga CSV pública (`fredgraph.csv`), que no pide clave. Cada serie se
+  baja una vez desde 1999 y se cachea 3 horas. La inflación interanual y los empleos creados se
+  calculan sobre el índice y el total publicados; si falta el mes base, ese mes se omite.
 - **Yahoo Finance**: endpoint público no oficial; puede limitar pedidos o cambiar sin aviso.
   Si falla, la app lo informa como "fuente no disponible". Los precios se cachean 15 minutos.
   Acepta acciones de EE.UU., ADRs, ETFs, índices (`^GSPC`, `^MERV`), acciones de BYMA
@@ -75,7 +79,6 @@ cd frontend && npm run typecheck && npm run build
 
 ## Próximos pasos
 
-1. **FRED** (Reserva Federal; clave gratuita): tasas, curva de rendimientos, IPC mensual y empleo de EE.UU.
-2. **BCRA** (sin clave): reservas, tipo de cambio, tasas y base monetaria de Argentina.
-3. **Resultados trimestrales**: sorpresa frente al estimado y reacción del precio.
-4. **Panel diario de índices** globales con un resumen narrativo.
+1. **BCRA** (sin clave): reservas, tipo de cambio, tasas y base monetaria de Argentina.
+2. **Resultados trimestrales**: sorpresa frente al estimado y reacción del precio.
+3. **Panel diario de índices** globales con un resumen narrativo.

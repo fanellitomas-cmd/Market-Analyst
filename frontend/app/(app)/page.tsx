@@ -3,15 +3,24 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ErrorNotice, Skeleton, SourceLine } from "@/components/Common";
+import { UsTile } from "@/components/UsTile";
 import { api, ApiError } from "@/lib/api";
 import { fmtByUnit } from "@/lib/format";
-import type { MacroSnapshotResponse } from "@/lib/types";
+import type { MacroSnapshotResponse, UsDashboardResponse } from "@/lib/types";
+
+// Los indicadores de EE.UU. que se ven de un vistazo en el Panorama.
+const US_HEADLINE = ["fed_funds", "t10y", "spread_10y2y", "cpi_yoy", "unemployment", "vix"];
 
 export default function PanoramaPage() {
   const [data, setData] = useState<MacroSnapshotResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [us, setUs] = useState<UsDashboardResponse | null>(null);
+  const [usError, setUsError] = useState<string | null>(null);
 
   useEffect(() => {
+    api<UsDashboardResponse>("/api/us/dashboard")
+      .then(setUs)
+      .catch((e) => setUsError(e instanceof ApiError ? e.message : "Error inesperado."));
     api<MacroSnapshotResponse>("/api/macro/snapshot")
       .then(setData)
       .catch((e) => setError(e instanceof ApiError ? e.message : "Error inesperado."));
@@ -26,6 +35,27 @@ export default function PanoramaPage() {
           cada valor: el Banco Mundial publica con uno o dos años de rezago.
         </p>
       </div>
+
+      <section className="card">
+        <div className="card-head">
+          <h2>Estados Unidos hoy</h2>
+          <Link href="/eeuu">Ver tasas, curva e inflación →</Link>
+        </div>
+        {usError && <ErrorNotice message={usError} />}
+        {!us && !usError && <Skeleton height={110} />}
+        {us && (
+          <>
+            <div className="tiles">
+              {US_HEADLINE.map((key) => us.items.find((i) => i.indicator.key === key))
+                .filter((i) => i !== undefined)
+                .map((item) => (
+                  <UsTile key={item.indicator.key} item={item} />
+                ))}
+            </div>
+            <SourceLine source={us.source} />
+          </>
+        )}
+      </section>
 
       <section className="card">
         <div className="card-head">
@@ -109,7 +139,6 @@ export default function PanoramaPage() {
         <section className="card">
           <h2>Próximamente</h2>
           <ul className="muted" style={{ margin: 0, paddingLeft: 18 }}>
-            <li>Tasas, curva de rendimientos e inflación mensual de EE.UU. (FRED)</li>
             <li>Reservas, tipo de cambio y tasas de Argentina (BCRA)</li>
             <li>Resultados trimestrales y reacción del precio</li>
             <li>Panel diario de índices globales</li>

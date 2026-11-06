@@ -113,3 +113,58 @@ export interface CompareResponse {
   source: SourceInfo;
   computed_at: string;
 }
+
+// ---------- EE.UU. (FRED) ----------
+
+export interface UsIndicatorInfo {
+  key: string;
+  series_id: string;
+  name: string;
+  unit: string;
+  frequency: string;
+  category: string;
+  description: string;
+  transform: "level" | "yoy_pct" | "diff";
+}
+
+export interface DatedValue {
+  date: string;
+  value: number;
+}
+
+export interface UsLatest {
+  indicator: UsIndicatorInfo;
+  status: DataStatus;
+  latest: DatedValue | null;
+  previous: DatedValue | null;
+  change: number | null;
+  year_ago: DatedValue | null;
+  note: string | null;
+}
+
+export interface UsDashboardResponse {
+  items: UsLatest[];
+  source: SourceInfo;
+}
+
+export interface UsSeriesResponse {
+  indicator: UsIndicatorInfo;
+  start: string;
+  observations: DatedValue[];
+  missing_points: number;
+  dropped_points: number;
+  source: SourceInfo;
+}
+
+export interface CurvePoint {
+  maturity: string;
+  series_id: string;
+  value: number | null;
+  date: string | null;
+  status: DataStatus;
+}
+
+export interface YieldCurveResponse {
+  curves: { label: string; target_date: string; points: CurvePoint[] }[];
+  source: SourceInfo;
+}

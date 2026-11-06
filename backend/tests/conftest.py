@@ -25,6 +25,7 @@ def make_settings(**overrides: Any) -> Settings:
         "jwt_secret": "secreto-de-test-suficientemente-largo-para-hs256",
         "worldbank_base_url": "https://wb.test/v2",
         "yahoo_base_url": "https://yahoo.test",
+        "fred_base_url": "https://fred.test",
     }
     base.update(overrides)
     return Settings(_env_file=None, **base)

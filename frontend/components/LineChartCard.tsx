@@ -17,7 +17,7 @@ export interface SeriesDef {
   color: string;
 }
 
-type Row = Record<string, string | number | null>;
+type Row = object;
 
 interface Props {
   data: Row[];

@@ -8,12 +8,14 @@ import httpx
 from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import auth, macro, markets
+from app.api import auth, macro, markets, us
 from app.core.cache import TTLCache
 from app.core.config import Settings, get_settings
 from app.core.security import LoginThrottle
 from app.services.macro import MacroService
 from app.services.markets import MarketsService
+from app.services.us_macro import UsMacroService
+from app.sources.fred import FredClient, FredSeries
 from app.sources.worldbank import CountrySeries, WorldBankClient
 from app.sources.yahoo import PriceSeries, YahooClient
 
@@ -39,6 +41,10 @@ def create_app(
                 YahooClient(client, settings.yahoo_base_url),
                 TTLCache[PriceSeries](settings.cache_ttl_prices_seconds),
             )
+            app.state.us_service = UsMacroService(
+                FredClient(client, settings.fred_base_url),
+                TTLCache[FredSeries](settings.cache_ttl_fred_seconds),
+            )
             app.state.login_throttle = LoginThrottle(
                 settings.login_max_failures, settings.login_lockout_seconds
             )
@@ -62,6 +68,7 @@ def create_app(
     api.include_router(auth.router)
     api.include_router(macro.router)
     api.include_router(markets.router)
+    api.include_router(us.router)
     app.include_router(api)
 
     @app.get("/health", include_in_schema=False)

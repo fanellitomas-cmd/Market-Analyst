@@ -97,3 +97,34 @@ export function monthTicks(dates: string[], max = 8): string[] {
   const step = Math.ceil(firsts.length / max);
   return firsts.filter((_, i) => i % step === 0);
 }
+
+/** Valor de un indicador de FRED según su unidad. */
+export function fmtUsValue(v: number | null, unit: string): string {
+  if (v === null) return NO_DATA;
+  switch (unit) {
+    case "%":
+      return fmtPercentValue(v, 2);
+    case "% interanual":
+    case "% anualizado":
+      return fmtPercentValue(v, 1);
+    case "p.p.":
+      return `${fmtNumber(v, 2)} p.p.`;
+    case "miles":
+      return `${fmtNumber(v, 0)} mil`;
+    case "personas":
+      return fmtNumber(v, 0);
+    case "USD/barril":
+      return `US$ ${fmtNumber(v, 2)}`;
+    default:
+      return fmtNumber(v, 1);
+  }
+}
+
+/** Cambio entre dos observaciones. En indicadores en % el cambio se expresa en puntos (p.p.). */
+export function fmtUsChange(v: number | null, unit: string): string {
+  if (v === null) return NO_DATA;
+  const sign = v > 0 ? "+" : v < 0 ? "−" : "";
+  const abs = Math.abs(v);
+  if (unit.startsWith("%") || unit === "p.p.") return `${sign}${fmtNumber(abs, 2)} p.p.`;
+  return `${sign}${fmtUsValue(abs, unit)}`;
+}
