@@ -1,0 +1,46 @@
+"""Configuración leída del entorno (o de `backend/.env`).
+
+Todas las fuentes de datos de esta primera versión son gratuitas y no necesitan clave:
+Banco Mundial (macro anual por país) y Yahoo Finance (precios diarios).
+"""
+
+from functools import lru_cache
+
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+
+    # --- Login de un solo usuario (sitio de uso personal) ---
+    app_username: str = "admin"
+    # Hash bcrypt de la contraseña; se genera con `python scripts/hash_password.py`.
+    # Vacío = login deshabilitado (la API responde 503 en vez de aceptar cualquier cosa).
+    app_password_hash: str = ""
+    # Secreto para firmar la sesión. Vacío = login deshabilitado.
+    jwt_secret: str = ""
+    jwt_expire_minutes: int = 60 * 24 * 7
+    # En producción (HTTPS) debe ser true para que el navegador sólo mande la cookie cifrada.
+    cookie_secure: bool = False
+    login_max_failures: int = 5
+    login_lockout_seconds: int = 15 * 60
+
+    cors_origins: list[str] = ["http://localhost:3000"]
+
+    # --- Fuentes de datos ---
+    http_timeout_seconds: float = 20.0
+    worldbank_base_url: str = "https://api.worldbank.org/v2"
+    yahoo_base_url: str = "https://query1.finance.yahoo.com"
+
+    # Los datos macro son anuales: no tiene sentido pedirlos más de unas veces por día.
+    cache_ttl_macro_seconds: int = 6 * 3600
+    cache_ttl_prices_seconds: int = 15 * 60
+
+    @property
+    def auth_configured(self) -> bool:
+        return bool(self.app_password_hash and self.jwt_secret)
+
+
+@lru_cache
+def get_settings() -> Settings:
+    return Settings()
