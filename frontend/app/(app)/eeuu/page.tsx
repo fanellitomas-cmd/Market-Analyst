@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { ErrorNotice, Skeleton, SourceLine } from "@/components/Common";
+import { EconCalendar } from "@/components/EconCalendar";
 import { LineChartCard } from "@/components/LineChartCard";
 import { UsTile } from "@/components/UsTile";
 import { api, ApiError, qs } from "@/lib/api";
@@ -122,6 +123,8 @@ export default function EeuuPage() {
         </section>
       ))}
       {dash && <SourceLine source={dash.source} />}
+
+      <EconCalendar />
 
       <section className="card" id="historia" aria-busy={seriesLoading}>
         <div className="card-head">

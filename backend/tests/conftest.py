@@ -36,6 +36,7 @@ def make_settings(**overrides: Any) -> Settings:
         "sec_www_url": "https://sec.test",
         "sec_data_url": "https://secdata.test",
         "callmebot_base_url": "https://callmebot.test",
+        "forexfactory_base_url": "https://ff.test",
         # Una base nueva por app de test, en el directorio temporal del sistema.
         "database_url": f"sqlite+aiosqlite:///{tempfile.gettempdir()}/ma-test-{uuid.uuid4().hex}.db",
     }

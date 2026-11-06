@@ -7,7 +7,8 @@ activos contra el S&P 500 (beta, correlación, volatilidad, caídas). Todo con f
 | Sección | Qué muestra | Fuente |
 |---|---|---|
 | **Panorama** | EE.UU. de un vistazo (Fed, 10 años, pendiente, inflación, desempleo, VIX) y último dato anual de PBI, crecimiento, PBI per cápita, inflación, desempleo, cuenta corriente y deuda, por país | Banco Mundial |
-| **EE.UU.** | Fed, bonos del Tesoro (3M a 30A), pendientes 10A−2A y 10A−3M, hipotecas, inflación (IPC, núcleo, PCE núcleo, esperada), desempleo, empleos creados, pedidos de desempleo, PBI, VIX, spread high yield, dólar y petróleo. Historia de cada serie y curva de rendimientos hoy / hace 1 mes / hace 1 año | FRED (Reserva Federal de St. Louis) |
+| **EE.UU.** | Calendario económico de la semana (horario de Buenos Aires) y sorpresas de CPI, PPI, PCE, NFP, desempleo y ventas minoristas frente al pronóstico. Fed, bonos del Tesoro (3M a 30A), pendientes 10A−2A y 10A−3M, hipotecas, inflación (IPC, núcleo, PCE núcleo, esperada), desempleo, empleos creados, pedidos de desempleo, PBI, VIX, spread high yield, dólar y petróleo. Historia de cada serie y curva de rendimientos hoy / hace 1 mes / hace 1 año | FRED (Reserva Federal de St. Louis) |
+| **Liquidez** | Balances de la Fed, el BCE y el BoJ; liquidez neta de la Fed (activos − TGA − RRP); DXY e índice amplio del dólar; spreads high yield y grado de inversión; HYG/LQD; condiciones financieras (NFCI); tasa real a 10 años; cíclicos/defensivos. Cambio a 1 mes, 3 meses y 1 año | FRED + Yahoo Finance |
 | **Argentina** | Dólar oficial, mayorista, MEP, CCL, blue, cripto y tarjeta con su brecha; evolución de oficial/MEP/CCL/blue; riesgo país; reservas, base monetaria, tasa de política, BADLAR, TAMAR, plazo fijo, inflación mensual/interanual/esperada, CER y UVA | BCRA (oficial), DolarApi y ArgentinaDatos (comunitarias) |
 | **Empresas** | Últimos 12 trimestres: ingresos, variación anual, márgenes bruto/operativo/neto, ganancia neta y por acción; reacción de la acción (y exceso sobre el SPY) a 1, 5 y 20 ruedas de cada publicación de resultados | SEC EDGAR + Yahoo Finance |
 | **Sistema** | Estado del agente 24/7: si está activo, sus tareas programadas (hora de Buenos Aires), la última corrida de cada una, los avisos enviados por WhatsApp y botones para probar | — |
@@ -31,6 +32,11 @@ WhatsApp (CallMeBot, gratis). Cada corrida y cada aviso quedan registrados en SQ
 Tareas actuales:
 - **Chequeo de fuentes** (días hábiles de NY, 07:15): verifica que cada fuente responda y avisa
   sólo si alguna falla.
+- **Calendario económico** (todos los días, 06:30): guarda los datos de la semana con su
+  pronóstico (ForexFactory).
+- **Datos publicados y sorpresas** (días hábiles 10:05, 11:05, 12:05 y 17:05): toma el dato real
+  de FRED apenas sale y avisa sólo si se desvía del pronóstico más que el umbral del indicador
+  (por ejemplo, 0,1 p.p. en el IPC o 50 mil en el NFP). Cada sorpresa se avisa una sola vez.
 - **Latido semanal** (lunes 08:00): confirma que el agente sigue vivo, con un resumen de la semana.
 
 Para instalarlo en tu PC o en un servidor gratuito, ver **[DEPLOY.md](DEPLOY.md)**.
@@ -114,6 +120,10 @@ cd frontend && npm run typecheck && npm run build
   reacción del precio usa los 8-K con ítem 2.02 y la hora de aceptación de la SEC para saber si
   se publicó antes, durante o después de la rueda. No incluye la sorpresa frente al consenso de
   analistas: no hay una fuente gratuita y confiable de estimados.
+- **ForexFactory**: feed público del calendario de la semana con el pronóstico de consenso. No
+  trae el dato real: el agente guarda el pronóstico y el dato real sale de FRED, calculado desde
+  la serie oficial (puede diferir en ±0,1 del redondeo publicado). El PBoC y los PMIs no se
+  incluyen: no tienen una fuente gratuita confiable.
 - **Yahoo Finance**: endpoint público no oficial; puede limitar pedidos o cambiar sin aviso.
   Si falla, la app lo informa como "fuente no disponible". Los precios se cachean 15 minutos.
   Acepta acciones de EE.UU., ADRs, ETFs, índices (`^GSPC`, `^MERV`), acciones de BYMA

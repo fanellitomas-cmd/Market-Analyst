@@ -5,10 +5,10 @@ Las tablas se crean al arrancar (`init_db`). Cuando haya que cambiar una tabla e
 agrega Alembic para migrar sin perder datos.
 """
 
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from pathlib import Path
 
-from sqlalchemy import DateTime, Integer, String, Text
+from sqlalchemy import Boolean, Date, DateTime, Float, Integer, String, Text, UniqueConstraint
 from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -54,6 +54,30 @@ class SystemState(Base):
     key: Mapped[str] = mapped_column(String(64), primary_key=True)
     value: Mapped[str] = mapped_column(Text)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class EconEvent(Base):
+    """Un dato económico del calendario, con el pronóstico (consenso) y, una vez publicado, el
+    dato real y la sorpresa."""
+
+    __tablename__ = "econ_events"
+    __table_args__ = (UniqueConstraint("title", "country", "release_at"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    event_key: Mapped[str | None] = mapped_column(String(32), index=True)  # None = sin seguimiento
+    title: Mapped[str] = mapped_column(String(128))
+    country: Mapped[str] = mapped_column(String(8))
+    release_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)  # UTC
+    impact: Mapped[str] = mapped_column(String(16))
+    forecast_raw: Mapped[str | None] = mapped_column(String(32))
+    previous_raw: Mapped[str | None] = mapped_column(String(32))
+    forecast_value: Mapped[float | None] = mapped_column(Float)
+    reference_month: Mapped[date | None] = mapped_column(Date)
+    actual: Mapped[float | None] = mapped_column(Float)
+    actual_captured_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    surprise: Mapped[float | None] = mapped_column(Float)
+    notified: Mapped[bool] = mapped_column(Boolean, default=False)
 
 
 def make_engine(url: str) -> AsyncEngine:

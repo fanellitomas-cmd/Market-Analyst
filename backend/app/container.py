@@ -19,11 +19,14 @@ from app.notify.channels import CallMeBotWhatsApp
 from app.notify.service import Notifier
 from app.services.ar_macro import ArMacroService, SeriesPoints
 from app.services.earnings import EarningsService
+from app.services.econ_calendar import EconCalendarService
+from app.services.liquidity import LiquidityService, Points
 from app.services.macro import MacroService
 from app.services.markets import MarketsService
 from app.services.us_macro import UsMacroService
 from app.sources.argentina_markets import ArgentinaDatosClient, DolarApiClient, DollarQuote
 from app.sources.bcra import BcraClient, BcraVariable
+from app.sources.forexfactory import ForexFactoryClient
 from app.sources.fred import FredClient, FredSeries
 from app.sources.sec import CompanyRef, Filing, SecClient
 from app.sources.worldbank import CountrySeries, WorldBankClient
@@ -39,6 +42,7 @@ class Clients:
     dolarapi: DolarApiClient
     argdatos: ArgentinaDatosClient
     sec: SecClient
+    forexfactory: ForexFactoryClient
 
 
 @dataclass
@@ -50,6 +54,8 @@ class Services:
     us: UsMacroService
     ar: ArMacroService
     earnings: EarningsService
+    liquidity: LiquidityService
+    calendar: EconCalendarService
     notifier: Notifier
     engine: AsyncEngine
     sessions: async_sessionmaker[AsyncSession]
@@ -77,10 +83,12 @@ async def build_services(
                 sec=SecClient(
                     client, settings.sec_www_url, settings.sec_data_url, settings.sec_user_agent
                 ),
+                forexfactory=ForexFactoryClient(client, settings.forexfactory_base_url),
             )
             markets = MarketsService(
                 clients.yahoo, TTLCache[PriceSeries](settings.cache_ttl_prices_seconds)
             )
+            us = UsMacroService(clients.fred, TTLCache[FredSeries](settings.cache_ttl_fred_seconds))
             yield Services(
                 settings=settings,
                 clients=clients,
@@ -89,8 +97,12 @@ async def build_services(
                     TTLCache[dict[str, CountrySeries]](settings.cache_ttl_macro_seconds),
                 ),
                 markets=markets,
-                us=UsMacroService(
-                    clients.fred, TTLCache[FredSeries](settings.cache_ttl_fred_seconds)
+                us=us,
+                calendar=EconCalendarService(clients.forexfactory, clients.fred, sessions),
+                liquidity=LiquidityService(
+                    us,
+                    markets,
+                    TTLCache[tuple[Points, str | None]](settings.cache_ttl_prices_seconds),
                 ),
                 ar=ArMacroService(
                     clients.bcra,

@@ -388,6 +388,10 @@ class UsMacroService:
 
         return await self._cache.get_or_load(series_id, load)
 
+    async def raw(self, series_id: str) -> FredSeries:
+        """Serie de FRED completa (desde 1999), con la misma caché que usa la página EE.UU."""
+        return await self._get(series_id)
+
     def _source(self, url: str) -> SourceInfo:
         return SourceInfo(name=SOURCE, url=url, fetched_at=datetime.now(UTC))
 

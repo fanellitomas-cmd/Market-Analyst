@@ -49,6 +49,7 @@ class Settings(BaseSettings):
     argentinadatos_base_url: str = "https://api.argentinadatos.com"
     # SEC EDGAR (gratis). La SEC exige identificarse: "Nombre Apellido tu@email.com".
     # Vacío = la sección de resultados queda deshabilitada.
+    forexfactory_base_url: str = "https://nfs.faireconomy.media"
     sec_user_agent: str = ""
     sec_www_url: str = "https://www.sec.gov"
     sec_data_url: str = "https://data.sec.gov"

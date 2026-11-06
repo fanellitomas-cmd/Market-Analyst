@@ -76,6 +76,7 @@ async def source_health(services: Services) -> JobResult:
         ("BCRA", c.bcra.list_variables()),
         ("DolarApi", c.dolarapi.get_quotes()),
         ("ArgentinaDatos", c.argdatos.get_country_risk_history()),
+        ("ForexFactory", c.forexfactory.this_week()),
     ]
     if c.sec.configured:
         checks.append(("SEC EDGAR", c.sec.ticker_map()))
@@ -122,6 +123,24 @@ async def weekly_heartbeat(services: Services) -> JobResult:
     return JobResult(detail=text.replace("\n", " "), notify=text)
 
 
+# ---------- Tareas: calendario económico ----------
+
+
+async def econ_calendar_refresh(services: Services) -> JobResult:
+    new, updated = await services.calendar.refresh()
+    return JobResult(detail=f"{new} eventos nuevos, {updated} pronósticos actualizados")
+
+
+async def econ_actuals(services: Services) -> JobResult:
+    surprises = await services.calendar.capture_actuals()
+    if not surprises:
+        return JobResult(detail="sin sorpresas relevantes nuevas")
+    return JobResult(
+        detail=f"{len(surprises)} sorpresa(s): " + ", ".join(s.spec.name for s in surprises),
+        notify="\n".join(s.message() for s in surprises),
+    )
+
+
 JOBS: list[JobSpec] = [
     JobSpec(
         id="salud_fuentes",
@@ -131,6 +150,23 @@ JOBS: list[JobSpec] = [
         cron={"day_of_week": "mon-fri", "hour": 7, "minute": 15},
         func=source_health,
         trading_days_only=True,
+    ),
+    JobSpec(
+        id="calendario_economico",
+        name="Calendario económico",
+        description="Guarda los datos de la semana con su pronóstico (ForexFactory).",
+        schedule="Todos los días, 06:30",
+        cron={"hour": 6, "minute": 30},
+        func=econ_calendar_refresh,
+    ),
+    JobSpec(
+        id="datos_publicados",
+        name="Datos publicados y sorpresas",
+        description="Toma el dato real de FRED apenas sale y avisa si se desvía del pronóstico "
+        "más que el umbral de cada indicador.",
+        schedule="Días hábiles, 10:05, 11:05, 12:05 y 17:05",
+        cron={"day_of_week": "mon-fri", "hour": "10,11,12,17", "minute": 5},
+        func=econ_actuals,
     ),
     JobSpec(
         id="latido_semanal",

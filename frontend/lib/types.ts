@@ -300,3 +300,64 @@ export interface SystemStatus {
   jobs: JobOut[];
   notifications: NotificationOut[];
 }
+
+// ---------- Liquidez y calendario ----------
+
+export interface LiqChange {
+  label: string;
+  kind: "pct" | "abs";
+  value: number | null;
+  base: DatedValue | null;
+}
+
+export interface LiqIndicator {
+  key: string;
+  name: string;
+  group: string;
+  unit: string;
+  description: string;
+  source: string;
+  status: DataStatus;
+  latest: DatedValue | null;
+  changes: LiqChange[];
+  note: string | null;
+}
+
+export interface LiquidityDashboard {
+  indicators: LiqIndicator[];
+  computed_at: string;
+}
+
+export interface LiquiditySeries {
+  key: string;
+  name: string;
+  unit: string;
+  start: string;
+  points: DatedValue[];
+  note: string | null;
+  source: SourceInfo;
+}
+
+export interface EconEventOut {
+  id: number;
+  title: string;
+  name: string;
+  country: string;
+  release_at: string;
+  impact: string;
+  forecast: string | null;
+  forecast_value: number | null;
+  previous: string | null;
+  actual: number | null;
+  actual_unit: string | null;
+  surprise: number | null;
+  surprise_note: string | null;
+  reference_month: string | null;
+  tracked: boolean;
+}
+
+export interface CalendarResponse {
+  upcoming: EconEventOut[];
+  recent: EconEventOut[];
+  last_refresh: string | null;
+}

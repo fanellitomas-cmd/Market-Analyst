@@ -162,3 +162,50 @@ export function fmtUsdAxis(v: number): string {
   if (abs >= 1e6) return `${fmtNumber(v / 1e6, 0)} M`;
   return fmtNumber(v, 0);
 }
+
+/** Valores del módulo de liquidez según su unidad. */
+export function fmtLiqValue(v: number | null, unit: string): string {
+  if (v === null) return NO_DATA;
+  switch (unit) {
+    case "miles de millones de USD":
+      return `US$ ${fmtNumber(v, 0)} mil M`;
+    case "miles de millones de EUR":
+      return `€ ${fmtNumber(v, 0)} mil M`;
+    case "billones de JPY":
+      return `¥ ${fmtNumber(v, 1)} billones`;
+    case "p.p.":
+      return `${fmtNumber(v, 2)} p.p.`;
+    case "%":
+      return fmtPercentValue(v, 2);
+    case "cociente":
+      return fmtNumber(v, 3);
+    default:
+      return fmtNumber(v, unit === "índice" ? 2 : 1);
+  }
+}
+
+export function fmtLiqChange(v: number | null, kind: "pct" | "abs", unit: string): string {
+  if (v === null) return NO_DATA;
+  if (kind === "pct") return fmtFraction(v, 1, true);
+  const sign = v > 0 ? "+" : v < 0 ? "−" : "";
+  const suffix = unit === "%" || unit === "p.p." ? " p.p." : "";
+  return `${sign}${fmtNumber(Math.abs(v), 2)}${suffix}`;
+}
+
+/** Fecha y hora en Buenos Aires. */
+export function fmtArDateTime(iso: string): string {
+  return new Date(iso).toLocaleString(LOCALE, {
+    timeZone: "America/Argentina/Buenos_Aires",
+    weekday: "short",
+    day: "2-digit",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+/** Etiqueta corta de eje para el módulo de liquidez (la unidad ya figura en el título). */
+export function fmtLiqAxis(v: number, unit: string): string {
+  if (unit.startsWith("miles de millones") || unit === "billones de JPY") return fmtNumber(v, 0);
+  return fmtLiqValue(v, unit);
+}

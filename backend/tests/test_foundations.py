@@ -170,6 +170,7 @@ def healthy_sources(router: Router) -> None:
     router.json("dolarapi.test", [])
     router.json("argdatos.test", [])
     router.json("sec.test", {})
+    router.json("ff.test", [])
 
 
 async def test_source_health_job(
@@ -179,7 +180,7 @@ async def test_source_health_job(
     healthy_sources(router)
     result = await source_health(services)
     assert result.notify is None and not result.failed
-    assert result.detail == "7/7 fuentes responden"
+    assert result.detail == "8/8 fuentes responden"
 
     router.add("bcra.test", lambda _r: httpx.Response(503))
     result = await source_health(services)
@@ -204,7 +205,12 @@ async def test_system_status_and_notify(wa_client: httpx.AsyncClient, router: Ro
     assert body["notifier_configured"] is True
     assert body["worker_alive"] is False  # el proceso en segundo plano no corre en los tests
     jobs = {j["id"]: j for j in body["jobs"]}
-    assert set(jobs) == {"salud_fuentes", "latido_semanal"}
+    assert set(jobs) == {
+        "salud_fuentes",
+        "calendario_economico",
+        "datos_publicados",
+        "latido_semanal",
+    }
     assert jobs["latido_semanal"]["next_run"].endswith("-03:00")  # hora de Buenos Aires
     assert jobs["salud_fuentes"]["last_run"] is None
 
