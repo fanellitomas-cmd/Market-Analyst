@@ -258,3 +258,45 @@ export interface EarningsResponse {
   avg_abs_move_1d: Metric;
   sources: SourceInfo[];
 }
+
+// ---------- Sistema (agente 24/7) ----------
+
+export interface JobRunOut {
+  id: number;
+  job_id: string;
+  started_at: string;
+  finished_at: string | null;
+  status: "ok" | "error" | "skipped" | "running";
+  detail: string | null;
+}
+
+export interface JobOut {
+  id: string;
+  name: string;
+  description: string;
+  schedule: string;
+  trading_days_only: boolean;
+  next_run: string | null;
+  last_run: JobRunOut | null;
+}
+
+export interface NotificationOut {
+  id: number;
+  created_at: string;
+  channel: string;
+  trigger: string;
+  text: string;
+  status: "sent" | "failed" | "disabled";
+  error: string | null;
+}
+
+export interface SystemStatus {
+  timezone: string;
+  now: string;
+  worker_last_heartbeat: string | null;
+  worker_alive: boolean;
+  notifier_channel: string;
+  notifier_configured: boolean;
+  jobs: JobOut[];
+  notifications: NotificationOut[];
+}

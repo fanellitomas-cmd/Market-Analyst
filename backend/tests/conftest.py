@@ -2,8 +2,11 @@
 
 import json
 import math
+import tempfile
+import uuid
 from collections.abc import AsyncIterator, Callable
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 from typing import Any
 
 import httpx
@@ -32,6 +35,9 @@ def make_settings(**overrides: Any) -> Settings:
         "sec_user_agent": "Test Runner test@example.com",
         "sec_www_url": "https://sec.test",
         "sec_data_url": "https://secdata.test",
+        "callmebot_base_url": "https://callmebot.test",
+        # Una base nueva por app de test, en el directorio temporal del sistema.
+        "database_url": f"sqlite+aiosqlite:///{tempfile.gettempdir()}/ma-test-{uuid.uuid4().hex}.db",
     }
     base.update(overrides)
     return Settings(_env_file=None, **base)
@@ -94,6 +100,12 @@ class Router:
             if fragment in url:
                 return handler(request)
         return httpx.Response(599, text=f"sin ruta simulada para {url}")
+
+
+def pytest_sessionfinish(session: pytest.Session, exitstatus: int) -> None:
+    """Borra las bases SQLite temporales que crearon los tests."""
+    for db in Path(tempfile.gettempdir()).glob("ma-test-*.db"):
+        db.unlink(missing_ok=True)
 
 
 @pytest.fixture

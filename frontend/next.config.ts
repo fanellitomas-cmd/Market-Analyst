@@ -9,6 +9,8 @@ const nextConfig: NextConfig = {
     return [{ source: "/api/:path*", destination: `${backendUrl}/api/:path*` }];
   },
   poweredByHeader: false,
+  // Servidor autocontenido para la imagen de Docker.
+  output: "standalone",
 };
 
 export default nextConfig;

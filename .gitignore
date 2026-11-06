@@ -20,3 +20,10 @@ backend/.env
 frontend/.env.local
 
 .DS_Store
+
+# Base de datos local del agente
+backend/data/
+*.db
+
+# Docker
+data/

@@ -18,7 +18,7 @@ from app.schemas import (
 )
 from app.services import quant
 from app.sources.errors import NotFoundError, SourceError
-from app.sources.yahoo import SOURCE, PriceSeries, YahooClient
+from app.sources.yahoo import SOURCE, BarInterval, Bars, PriceSeries, YahooClient
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +30,15 @@ class MarketsService:
     def __init__(self, yahoo: YahooClient, cache: TTLCache[PriceSeries]) -> None:
         self._yahoo = yahoo
         self._cache = cache
+        # Las velas intradía cambian minuto a minuto: caché corta (60 s) sólo para no repetir
+        # el mismo pedido cuando varias pantallas o tareas lo piden a la vez.
+        self._bars_cache: TTLCache[Bars] = TTLCache(60, max_entries=128)
+
+    async def get_bars(self, symbol: str, interval: BarInterval, bar_range: str) -> Bars:
+        return await self._bars_cache.get_or_load(
+            f"{symbol}:{interval}:{bar_range}",
+            lambda: self._yahoo.get_bars(symbol, interval, bar_range),
+        )
 
     async def get_prices(self, symbol: str, price_range: PriceRange) -> PriceSeries:
         return await self._cache.get_or_load(

@@ -133,3 +133,24 @@ class CompareResponse(StrictModel):
     rows: list[CompareRow]
     source: SourceInfo
     computed_at: datetime
+
+
+class BarOut(StrictModel):
+    time: datetime
+    open: float
+    high: float
+    low: float
+    close: float
+    volume: float | None
+
+
+class BarsResponse(StrictModel):
+    symbol: str
+    name: str | None
+    currency: str | None
+    interval: str
+    exchange_timezone: str | None
+    adjusted: bool
+    missing_points: int
+    bars: list[BarOut]
+    source: SourceInfo

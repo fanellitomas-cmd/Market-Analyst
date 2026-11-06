@@ -3,27 +3,15 @@
 import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from typing import Any
 
 import httpx
 from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import ar, auth, earnings, macro, markets, us
-from app.core.cache import TTLCache
+from app.api import ar, auth, earnings, macro, markets, system, us
+from app.container import build_services
 from app.core.config import Settings, get_settings
 from app.core.security import LoginThrottle
-from app.services.ar_macro import ArMacroService, SeriesPoints
-from app.services.earnings import EarningsService
-from app.services.macro import MacroService
-from app.services.markets import MarketsService
-from app.services.us_macro import UsMacroService
-from app.sources.argentina_markets import ArgentinaDatosClient, DolarApiClient, DollarQuote
-from app.sources.bcra import BcraClient, BcraVariable
-from app.sources.fred import FredClient, FredSeries
-from app.sources.sec import CompanyRef, Filing, SecClient
-from app.sources.worldbank import CountrySeries, WorldBankClient
-from app.sources.yahoo import PriceSeries, YahooClient
 
 logger = logging.getLogger(__name__)
 
@@ -36,38 +24,13 @@ def create_app(
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-        async with httpx.AsyncClient(
-            timeout=settings.http_timeout_seconds, transport=transport, follow_redirects=True
-        ) as client:
-            app.state.macro_service = MacroService(
-                WorldBankClient(client, settings.worldbank_base_url),
-                TTLCache[dict[str, CountrySeries]](settings.cache_ttl_macro_seconds),
-            )
-            app.state.markets_service = MarketsService(
-                YahooClient(client, settings.yahoo_base_url),
-                TTLCache[PriceSeries](settings.cache_ttl_prices_seconds),
-            )
-            app.state.us_service = UsMacroService(
-                FredClient(client, settings.fred_base_url),
-                TTLCache[FredSeries](settings.cache_ttl_fred_seconds),
-            )
-            app.state.ar_service = ArMacroService(
-                BcraClient(client, settings.bcra_base_url),
-                DolarApiClient(client, settings.dolarapi_base_url),
-                ArgentinaDatosClient(client, settings.argentinadatos_base_url),
-                TTLCache[list[BcraVariable]](settings.cache_ttl_bcra_seconds),
-                TTLCache[list[DollarQuote]](settings.cache_ttl_dollar_quotes_seconds),
-                TTLCache[SeriesPoints](settings.cache_ttl_ar_series_seconds),
-            )
-            app.state.earnings_service = EarningsService(
-                SecClient(
-                    client, settings.sec_www_url, settings.sec_data_url, settings.sec_user_agent
-                ),
-                app.state.markets_service,
-                TTLCache[dict[str, CompanyRef]](24 * 3600),
-                TTLCache[dict[str, Any]](settings.cache_ttl_sec_facts_seconds, max_entries=64),
-                TTLCache[list[Filing]](settings.cache_ttl_sec_filings_seconds, max_entries=64),
-            )
+        async with build_services(settings, transport) as services:
+            app.state.services = services
+            app.state.macro_service = services.macro
+            app.state.markets_service = services.markets
+            app.state.us_service = services.us
+            app.state.ar_service = services.ar
+            app.state.earnings_service = services.earnings
             app.state.login_throttle = LoginThrottle(
                 settings.login_max_failures, settings.login_lockout_seconds
             )
@@ -94,6 +57,7 @@ def create_app(
     api.include_router(us.router)
     api.include_router(ar.router)
     api.include_router(earnings.router)
+    api.include_router(system.router)
     app.include_router(api)
 
     @app.get("/health", include_in_schema=False)

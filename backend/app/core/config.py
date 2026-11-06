@@ -28,6 +28,15 @@ class Settings(BaseSettings):
 
     cors_origins: list[str] = ["http://localhost:3000"]
 
+    # --- Agente 24/7 ---
+    database_url: str = "sqlite+aiosqlite:///./data/market_analyst.db"
+    # Los horarios de las tareas programadas se expresan en esta zona.
+    agent_timezone: str = "America/Argentina/Buenos_Aires"
+    # WhatsApp vía CallMeBot (gratis para mensajes al propio número). Formato: +5491112345678
+    whatsapp_phone: str = ""
+    callmebot_apikey: str = ""
+    callmebot_base_url: str = "https://api.callmebot.com"
+
     # --- Fuentes de datos ---
     http_timeout_seconds: float = 20.0
     worldbank_base_url: str = "https://api.worldbank.org/v2"

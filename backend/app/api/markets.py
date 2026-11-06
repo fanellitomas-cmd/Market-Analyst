@@ -1,12 +1,14 @@
+from datetime import UTC, datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.api.deps import CurrentUser, get_markets_service
-from app.schemas import CompareResponse, PriceRange, RelativeAnalysis
+from app.domain import SourceInfo
+from app.schemas import BarOut, BarsResponse, CompareResponse, PriceRange, RelativeAnalysis
 from app.services.markets import MAX_COMPARE_SYMBOLS, MarketsService
 from app.sources.errors import NotFoundError, SourceError
-from app.sources.yahoo import normalize_symbol
+from app.sources.yahoo import BarInterval, normalize_symbol
 
 router = APIRouter(prefix="/markets", tags=["markets"])
 MarketsDep = Annotated[MarketsService, Depends(get_markets_service)]
@@ -57,3 +59,41 @@ async def compare(
         raise HTTPException(status.HTTP_404_NOT_FOUND, exc.message) from exc
     except SourceError as exc:
         raise HTTPException(status.HTTP_502_BAD_GATEWAY, f"Fuente no disponible: {exc}") from exc
+
+
+@router.get("/bars", response_model=BarsResponse)
+async def bars(
+    _: CurrentUser,
+    service: MarketsDep,
+    symbol: str,
+    interval: BarInterval = "1d",
+    range: str = "1y",
+) -> BarsResponse:
+    """Velas OHLCV: diarias (ajustadas) o intradía (sin ajustar, historia corta)."""
+    sym = _symbol(symbol)
+    try:
+        data = await service.get_bars(sym, interval, range)
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+    except NotFoundError as exc:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, exc.message) from exc
+    except SourceError as exc:
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, f"Fuente no disponible: {exc}") from exc
+    return BarsResponse(
+        symbol=data.symbol,
+        name=data.name,
+        currency=data.currency,
+        interval=data.interval,
+        exchange_timezone=data.exchange_timezone,
+        adjusted=data.adjusted,
+        missing_points=data.missing_points,
+        bars=[
+            BarOut(time=b.time, open=b.open, high=b.high, low=b.low, close=b.close, volume=b.volume)
+            for b in data.bars
+        ],
+        source=SourceInfo(
+            name="Yahoo Finance",
+            url=f"https://finance.yahoo.com/quote/{sym}",
+            fetched_at=datetime.now(UTC),
+        ),
+    )

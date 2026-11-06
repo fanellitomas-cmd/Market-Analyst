@@ -10,6 +10,7 @@ activos contra el S&P 500 (beta, correlación, volatilidad, caídas). Todo con f
 | **EE.UU.** | Fed, bonos del Tesoro (3M a 30A), pendientes 10A−2A y 10A−3M, hipotecas, inflación (IPC, núcleo, PCE núcleo, esperada), desempleo, empleos creados, pedidos de desempleo, PBI, VIX, spread high yield, dólar y petróleo. Historia de cada serie y curva de rendimientos hoy / hace 1 mes / hace 1 año | FRED (Reserva Federal de St. Louis) |
 | **Argentina** | Dólar oficial, mayorista, MEP, CCL, blue, cripto y tarjeta con su brecha; evolución de oficial/MEP/CCL/blue; riesgo país; reservas, base monetaria, tasa de política, BADLAR, TAMAR, plazo fijo, inflación mensual/interanual/esperada, CER y UVA | BCRA (oficial), DolarApi y ArgentinaDatos (comunitarias) |
 | **Empresas** | Últimos 12 trimestres: ingresos, variación anual, márgenes bruto/operativo/neto, ganancia neta y por acción; reacción de la acción (y exceso sobre el SPY) a 1, 5 y 20 ruedas de cada publicación de resultados | SEC EDGAR + Yahoo Finance |
+| **Sistema** | Estado del agente 24/7: si está activo, sus tareas programadas (hora de Buenos Aires), la última corrida de cada una, los avisos enviados por WhatsApp y botones para probar | — |
 | **Macro global** | Series históricas por indicador, comparando hasta 8 países (EE.UU., Canadá, Argentina, Brasil, México, Chile, Zona Euro, Alemania, Francia, Italia, Reino Unido, Japón, China) | Banco Mundial |
 | **Mercados** | Beta, correlación, R², rendimiento, volatilidad anualizada y caída máxima contra un benchmark (SPY, QQQ, IWM, EEM, ACWI); correlación y beta móviles; comparación de hasta 15 activos | Yahoo Finance |
 
@@ -20,16 +21,34 @@ nunca un `0` ni un valor interpolado. Cada número muestra la fuente, la hora de
 en los datos macro, el año al que corresponde. Con menos de 60 ruedas en común, beta y
 correlación quedan como "no disponible" en lugar de mostrar una cifra poco confiable.
 
+## Agente 24/7
+
+Un proceso aparte (`python -m app.worker`, o el servicio `worker` de Docker) corre tareas
+programadas en hora de Buenos Aires, conoce los feriados de la bolsa de Nueva York y avisa por
+WhatsApp (CallMeBot, gratis). Cada corrida y cada aviso quedan registrados en SQLite y se ven en
+**Sistema**. Principio "sin ruido": una tarea sólo avisa cuando hay algo que decir.
+
+Tareas actuales:
+- **Chequeo de fuentes** (días hábiles de NY, 07:15): verifica que cada fuente responda y avisa
+  sólo si alguna falla.
+- **Latido semanal** (lunes 08:00): confirma que el agente sigue vivo, con un resumen de la semana.
+
+Para instalarlo en tu PC o en un servidor gratuito, ver **[DEPLOY.md](DEPLOY.md)**.
+
 ## Estructura
 
 ```
-backend/    API en Python (FastAPI)
+backend/    API en Python (FastAPI) y agente (APScheduler)
+  app/agent/      tareas programadas del agente
+  app/notify/     canales de aviso (WhatsApp vía CallMeBot)
+  app/container.py arma clientes y servicios (compartido por API y agente)
+  app/worker.py   proceso del agente 24/7
   app/sources/    clientes de Banco Mundial, FRED, BCRA, DolarApi, ArgentinaDatos,
                   SEC EDGAR y Yahoo Finance
   app/services/   macro.py (países), us_macro.py (FRED), ar_macro.py (Argentina),
                   earnings.py (SEC), quant.py (fórmulas), markets.py
   app/api/        endpoints /api/auth, /api/macro, /api/us, /api/ar, /api/markets,
-                  /api/earnings
+                  /api/earnings, /api/system
   tests/          tests con respuestas simuladas (no salen a la red)
 frontend/   sitio en Next.js (App Router) + Recharts
 ```
@@ -38,6 +57,8 @@ El navegador sólo habla con Next.js; `next.config.ts` reenvía `/api/*` al back
 cookie de sesión (httpOnly) queda en el mismo dominio y no hace falta CORS.
 
 ## Cómo correrlo en tu máquina
+
+La forma más simple es Docker: ver **[DEPLOY.md](DEPLOY.md)**. Para desarrollar sin Docker:
 
 Requisitos: Python 3.11+ y Node 20+.
 
@@ -52,6 +73,8 @@ cp .env.example .env
 python scripts/hash_password.py  # elegí tu contraseña y pegá las 2 líneas que imprime en .env
 # en .env completá también SEC_USER_AGENT="Tu Nombre tu@email.com" (lo exige la SEC)
 uvicorn app.main:app --reload --port 8000
+# en otra terminal, el agente 24/7:
+python -m app.worker
 ```
 
 ### 2. Frontend (en otra terminal)

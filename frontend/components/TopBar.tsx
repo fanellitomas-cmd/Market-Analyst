@@ -11,6 +11,7 @@ const LINKS = [
   { href: "/macro", label: "Macro global" },
   { href: "/mercados", label: "Mercados" },
   { href: "/empresas", label: "Empresas" },
+  { href: "/sistema", label: "Sistema" },
 ];
 
 export function TopBar() {
