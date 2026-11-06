@@ -7,6 +7,7 @@ import { api } from "@/lib/api";
 const LINKS = [
   { href: "/", label: "Panorama" },
   { href: "/eeuu", label: "EE.UU." },
+  { href: "/argentina", label: "Argentina" },
   { href: "/macro", label: "Macro global" },
   { href: "/mercados", label: "Mercados" },
 ];

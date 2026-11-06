@@ -8,13 +8,16 @@ import httpx
 from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import auth, macro, markets, us
+from app.api import ar, auth, macro, markets, us
 from app.core.cache import TTLCache
 from app.core.config import Settings, get_settings
 from app.core.security import LoginThrottle
+from app.services.ar_macro import ArMacroService, SeriesPoints
 from app.services.macro import MacroService
 from app.services.markets import MarketsService
 from app.services.us_macro import UsMacroService
+from app.sources.argentina_markets import ArgentinaDatosClient, DolarApiClient, DollarQuote
+from app.sources.bcra import BcraClient, BcraVariable
 from app.sources.fred import FredClient, FredSeries
 from app.sources.worldbank import CountrySeries, WorldBankClient
 from app.sources.yahoo import PriceSeries, YahooClient
@@ -45,6 +48,14 @@ def create_app(
                 FredClient(client, settings.fred_base_url),
                 TTLCache[FredSeries](settings.cache_ttl_fred_seconds),
             )
+            app.state.ar_service = ArMacroService(
+                BcraClient(client, settings.bcra_base_url),
+                DolarApiClient(client, settings.dolarapi_base_url),
+                ArgentinaDatosClient(client, settings.argentinadatos_base_url),
+                TTLCache[list[BcraVariable]](settings.cache_ttl_bcra_seconds),
+                TTLCache[list[DollarQuote]](settings.cache_ttl_dollar_quotes_seconds),
+                TTLCache[SeriesPoints](settings.cache_ttl_ar_series_seconds),
+            )
             app.state.login_throttle = LoginThrottle(
                 settings.login_max_failures, settings.login_lockout_seconds
             )
@@ -69,6 +80,7 @@ def create_app(
     api.include_router(macro.router)
     api.include_router(markets.router)
     api.include_router(us.router)
+    api.include_router(ar.router)
     app.include_router(api)
 
     @app.get("/health", include_in_schema=False)

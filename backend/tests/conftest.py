@@ -26,6 +26,9 @@ def make_settings(**overrides: Any) -> Settings:
         "worldbank_base_url": "https://wb.test/v2",
         "yahoo_base_url": "https://yahoo.test",
         "fred_base_url": "https://fred.test",
+        "bcra_base_url": "https://bcra.test",
+        "dolarapi_base_url": "https://dolarapi.test",
+        "argentinadatos_base_url": "https://argdatos.test",
     }
     base.update(overrides)
     return Settings(_env_file=None, **base)

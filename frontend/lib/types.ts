@@ -168,3 +168,51 @@ export interface YieldCurveResponse {
   curves: { label: string; target_date: string; points: CurvePoint[] }[];
   source: SourceInfo;
 }
+
+// ---------- Argentina ----------
+
+export type ArKind = "musd" | "mars" | "fx" | "pct" | "index" | "bps";
+
+export interface ArIndicatorInfo {
+  key: string;
+  name: string;
+  group: string;
+  kind: ArKind;
+  description: string;
+  source: string;
+}
+
+export interface ArLatest {
+  indicator: ArIndicatorInfo;
+  status: DataStatus;
+  value: number | null;
+  date: string | null;
+  source_description: string | null;
+  source_unit: string | null;
+  note: string | null;
+}
+
+export interface DollarRow {
+  house: string;
+  name: string;
+  buy: number | null;
+  sell: number | null;
+  updated_at: string | null;
+  gap_vs_official: number | null;
+}
+
+export interface ArDashboardResponse {
+  dollars: { status: DataStatus; rows: DollarRow[]; note: string | null; source: SourceInfo };
+  country_risk: ArLatest;
+  country_risk_change: number | null;
+  bcra: ArLatest[];
+  bcra_source: SourceInfo;
+}
+
+export interface ArSeriesResponse {
+  indicator: ArIndicatorInfo;
+  start: string;
+  observations: DatedValue[];
+  source_description: string | null;
+  source: SourceInfo;
+}

@@ -1,8 +1,8 @@
 """Configuración leída del entorno (o de `backend/.env`).
 
 Todas las fuentes de datos de esta primera versión son gratuitas y no necesitan clave:
-Banco Mundial (macro anual por país), FRED (macro de EE.UU.) y Yahoo Finance (precios
-diarios).
+Banco Mundial (macro anual por país), FRED (macro de EE.UU.), BCRA y APIs comunitarias
+(Argentina) y Yahoo Finance (precios diarios).
 """
 
 from functools import lru_cache
@@ -34,12 +34,19 @@ class Settings(BaseSettings):
     yahoo_base_url: str = "https://query1.finance.yahoo.com"
     # Descarga CSV pública de FRED (Reserva Federal de St. Louis): gratis y sin clave.
     fred_base_url: str = "https://fred.stlouisfed.org"
+    # Argentina: API oficial del BCRA y dos APIs comunitarias (dólar y riesgo país).
+    bcra_base_url: str = "https://api.bcra.gob.ar"
+    dolarapi_base_url: str = "https://dolarapi.com"
+    argentinadatos_base_url: str = "https://api.argentinadatos.com"
 
     # Los datos macro son anuales: no tiene sentido pedirlos más de unas veces por día.
     cache_ttl_macro_seconds: int = 6 * 3600
     cache_ttl_prices_seconds: int = 15 * 60
     # FRED actualiza una vez por día hábil (las tasas, a la tarde de EE.UU.).
     cache_ttl_fred_seconds: int = 3 * 3600
+    cache_ttl_bcra_seconds: int = 3600
+    cache_ttl_dollar_quotes_seconds: int = 5 * 60
+    cache_ttl_ar_series_seconds: int = 3 * 3600
 
     @property
     def auth_configured(self) -> bool:

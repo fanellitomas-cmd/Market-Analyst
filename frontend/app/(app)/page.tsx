@@ -5,8 +5,8 @@ import { useEffect, useState } from "react";
 import { ErrorNotice, Skeleton, SourceLine } from "@/components/Common";
 import { UsTile } from "@/components/UsTile";
 import { api, ApiError } from "@/lib/api";
-import { fmtByUnit } from "@/lib/format";
-import type { MacroSnapshotResponse, UsDashboardResponse } from "@/lib/types";
+import { fmtArValue, fmtByUnit, fmtDate, fmtFraction } from "@/lib/format";
+import type { ArDashboardResponse, MacroSnapshotResponse, UsDashboardResponse } from "@/lib/types";
 
 // Los indicadores de EE.UU. que se ven de un vistazo en el Panorama.
 const US_HEADLINE = ["fed_funds", "t10y", "spread_10y2y", "cpi_yoy", "unemployment", "vix"];
@@ -16,8 +16,13 @@ export default function PanoramaPage() {
   const [error, setError] = useState<string | null>(null);
   const [us, setUs] = useState<UsDashboardResponse | null>(null);
   const [usError, setUsError] = useState<string | null>(null);
+  const [ar, setAr] = useState<ArDashboardResponse | null>(null);
+  const [arError, setArError] = useState<string | null>(null);
 
   useEffect(() => {
+    api<ArDashboardResponse>("/api/ar/dashboard")
+      .then(setAr)
+      .catch((e) => setArError(e instanceof ApiError ? e.message : "Error inesperado."));
     api<UsDashboardResponse>("/api/us/dashboard")
       .then(setUs)
       .catch((e) => setUsError(e instanceof ApiError ? e.message : "Error inesperado."));
@@ -54,6 +59,46 @@ export default function PanoramaPage() {
             </div>
             <SourceLine source={us.source} />
           </>
+        )}
+      </section>
+
+      <section className="card">
+        <div className="card-head">
+          <h2>Argentina hoy</h2>
+          <Link href="/argentina">Ver dólar, tasas y BCRA →</Link>
+        </div>
+        {arError && <ErrorNotice message={arError} />}
+        {!ar && !arError && <Skeleton height={110} />}
+        {ar && (
+          <div className="tiles">
+            {["oficial", "bolsa", "contadoconliqui", "blue"].map((house) => {
+              const row = ar.dollars.rows.find((r) => r.house === house);
+              if (!row) return null;
+              return (
+                <div className="tile" key={house}>
+                  <div className="tile-label">Dólar {row.name}</div>
+                  <div className="tile-value">{fmtArValue(row.sell, "fx")}</div>
+                  <div className="tile-sub">
+                    {row.gap_vs_official !== null
+                      ? `brecha ${fmtFraction(row.gap_vs_official, 1, true)}`
+                      : "venta"}
+                  </div>
+                </div>
+              );
+            })}
+            {[ar.country_risk, ...ar.bcra.filter((i) => ["inflacion_mensual", "reservas"].includes(i.indicator.key))].map(
+              (item) => (
+                <div className="tile" key={item.indicator.key}>
+                  <div className="tile-label">{item.indicator.name}</div>
+                  <div className="tile-value">{fmtArValue(item.value, item.indicator.kind)}</div>
+                  <div className="tile-sub">
+                    {item.date ? fmtDate(item.date) : item.status === "ERROR_FUENTE" ? "Fuente no disponible" : "Sin dato"}
+                    {item.indicator.kind === "musd" && item.status === "OK" ? ` · ${item.source_unit ?? "millones de USD"}` : ""}
+                  </div>
+                </div>
+              ),
+            )}
+          </div>
         )}
       </section>
 
@@ -139,7 +184,6 @@ export default function PanoramaPage() {
         <section className="card">
           <h2>Próximamente</h2>
           <ul className="muted" style={{ margin: 0, paddingLeft: 18 }}>
-            <li>Reservas, tipo de cambio y tasas de Argentina (BCRA)</li>
             <li>Resultados trimestrales y reacción del precio</li>
             <li>Panel diario de índices globales</li>
           </ul>

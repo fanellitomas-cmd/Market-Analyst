@@ -128,3 +128,29 @@ export function fmtUsChange(v: number | null, unit: string): string {
   if (unit.startsWith("%") || unit === "p.p.") return `${sign}${fmtNumber(abs, 2)} p.p.`;
   return `${sign}${fmtUsValue(abs, unit)}`;
 }
+
+/** Valores de Argentina. Montos del BCRA se muestran tal cual, con la unidad que informa el BCRA. */
+export function fmtArValue(v: number | null, kind: string): string {
+  if (v === null) return NO_DATA;
+  switch (kind) {
+    case "fx":
+      return `$ ${fmtNumber(v, 2)}`;
+    case "pct":
+      return fmtPercentValue(v, 1);
+    case "bps":
+      return `${fmtNumber(v, 0)} pb`;
+    case "index":
+      return fmtNumber(v, 2);
+    default:
+      return fmtNumber(v, 0);
+  }
+}
+
+export const AR_DEFAULT_UNIT: Record<string, string> = {
+  musd: "millones de USD",
+  mars: "millones de $",
+  fx: "pesos por dólar",
+  pct: "%",
+  index: "índice",
+  bps: "puntos básicos",
+};
