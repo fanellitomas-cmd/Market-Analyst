@@ -10,6 +10,7 @@ const LINKS = [
   { href: "/argentina", label: "Argentina" },
   { href: "/macro", label: "Macro global" },
   { href: "/mercados", label: "Mercados" },
+  { href: "/empresas", label: "Empresas" },
 ];
 
 export function TopBar() {

@@ -3,22 +3,25 @@
 import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from typing import Any
 
 import httpx
 from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import ar, auth, macro, markets, us
+from app.api import ar, auth, earnings, macro, markets, us
 from app.core.cache import TTLCache
 from app.core.config import Settings, get_settings
 from app.core.security import LoginThrottle
 from app.services.ar_macro import ArMacroService, SeriesPoints
+from app.services.earnings import EarningsService
 from app.services.macro import MacroService
 from app.services.markets import MarketsService
 from app.services.us_macro import UsMacroService
 from app.sources.argentina_markets import ArgentinaDatosClient, DolarApiClient, DollarQuote
 from app.sources.bcra import BcraClient, BcraVariable
 from app.sources.fred import FredClient, FredSeries
+from app.sources.sec import CompanyRef, Filing, SecClient
 from app.sources.worldbank import CountrySeries, WorldBankClient
 from app.sources.yahoo import PriceSeries, YahooClient
 
@@ -56,6 +59,15 @@ def create_app(
                 TTLCache[list[DollarQuote]](settings.cache_ttl_dollar_quotes_seconds),
                 TTLCache[SeriesPoints](settings.cache_ttl_ar_series_seconds),
             )
+            app.state.earnings_service = EarningsService(
+                SecClient(
+                    client, settings.sec_www_url, settings.sec_data_url, settings.sec_user_agent
+                ),
+                app.state.markets_service,
+                TTLCache[dict[str, CompanyRef]](24 * 3600),
+                TTLCache[dict[str, Any]](settings.cache_ttl_sec_facts_seconds, max_entries=64),
+                TTLCache[list[Filing]](settings.cache_ttl_sec_filings_seconds, max_entries=64),
+            )
             app.state.login_throttle = LoginThrottle(
                 settings.login_max_failures, settings.login_lockout_seconds
             )
@@ -81,6 +93,7 @@ def create_app(
     api.include_router(markets.router)
     api.include_router(us.router)
     api.include_router(ar.router)
+    api.include_router(earnings.router)
     app.include_router(api)
 
     @app.get("/health", include_in_schema=False)

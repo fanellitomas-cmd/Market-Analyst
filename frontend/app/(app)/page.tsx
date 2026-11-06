@@ -182,11 +182,12 @@ export default function PanoramaPage() {
           <Link href="/mercados">Analizar un activo →</Link>
         </section>
         <section className="card">
-          <h2>Próximamente</h2>
-          <ul className="muted" style={{ margin: 0, paddingLeft: 18 }}>
-            <li>Resultados trimestrales y reacción del precio</li>
-            <li>Panel diario de índices globales</li>
-          </ul>
+          <h2>Empresas</h2>
+          <p className="muted" style={{ margin: 0 }}>
+            Resultados trimestrales presentados ante la SEC (ingresos, márgenes, ganancia por acción)
+            y cómo reaccionó la acción en cada publicación.
+          </p>
+          <Link href="/empresas">Ver resultados →</Link>
         </section>
       </div>
     </>

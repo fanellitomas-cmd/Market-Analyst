@@ -154,3 +154,11 @@ export const AR_DEFAULT_UNIT: Record<string, string> = {
   index: "índice",
   bps: "puntos básicos",
 };
+
+/** Etiqueta corta de eje para montos en dólares (la moneda va en el título del gráfico). */
+export function fmtUsdAxis(v: number): string {
+  const abs = Math.abs(v);
+  if (abs >= 1e9) return `${fmtNumber(v / 1e9, 0)} mil M`;
+  if (abs >= 1e6) return `${fmtNumber(v / 1e6, 0)} M`;
+  return fmtNumber(v, 0);
+}

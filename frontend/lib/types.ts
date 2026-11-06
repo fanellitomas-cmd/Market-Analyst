@@ -216,3 +216,45 @@ export interface ArSeriesResponse {
   source_description: string | null;
   source: SourceInfo;
 }
+
+// ---------- Resultados (SEC) ----------
+
+export interface QuarterRow {
+  period_start: string;
+  period_end: string;
+  revenue: Metric;
+  revenue_yoy: Metric;
+  gross_margin: Metric;
+  operating_margin: Metric;
+  net_margin: Metric;
+  net_income: Metric;
+  eps_diluted: Metric;
+  eps_yoy: Metric;
+  derived: boolean;
+}
+
+export interface Reaction {
+  horizon: number;
+  stock: number | null;
+  benchmark: number | null;
+  excess: number | null;
+  status: DataStatus;
+  note: string | null;
+}
+
+export interface EarningsEvent {
+  filing_date: string;
+  accepted_at_ny: string | null;
+  session: string;
+  base_date: string | null;
+  reactions: Reaction[];
+  filing_url: string;
+}
+
+export interface EarningsResponse {
+  company: { ticker: string; name: string; cik: number };
+  quarters: QuarterRow[];
+  events: EarningsEvent[];
+  avg_abs_move_1d: Metric;
+  sources: SourceInfo[];
+}

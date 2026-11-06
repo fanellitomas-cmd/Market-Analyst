@@ -29,6 +29,9 @@ def make_settings(**overrides: Any) -> Settings:
         "bcra_base_url": "https://bcra.test",
         "dolarapi_base_url": "https://dolarapi.test",
         "argentinadatos_base_url": "https://argdatos.test",
+        "sec_user_agent": "Test Runner test@example.com",
+        "sec_www_url": "https://sec.test",
+        "sec_data_url": "https://secdata.test",
     }
     base.update(overrides)
     return Settings(_env_file=None, **base)

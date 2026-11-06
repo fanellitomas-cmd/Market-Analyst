@@ -38,6 +38,11 @@ class Settings(BaseSettings):
     bcra_base_url: str = "https://api.bcra.gob.ar"
     dolarapi_base_url: str = "https://dolarapi.com"
     argentinadatos_base_url: str = "https://api.argentinadatos.com"
+    # SEC EDGAR (gratis). La SEC exige identificarse: "Nombre Apellido tu@email.com".
+    # Vacío = la sección de resultados queda deshabilitada.
+    sec_user_agent: str = ""
+    sec_www_url: str = "https://www.sec.gov"
+    sec_data_url: str = "https://data.sec.gov"
 
     # Los datos macro son anuales: no tiene sentido pedirlos más de unas veces por día.
     cache_ttl_macro_seconds: int = 6 * 3600
@@ -47,6 +52,8 @@ class Settings(BaseSettings):
     cache_ttl_bcra_seconds: int = 3600
     cache_ttl_dollar_quotes_seconds: int = 5 * 60
     cache_ttl_ar_series_seconds: int = 3 * 3600
+    cache_ttl_sec_facts_seconds: int = 6 * 3600
+    cache_ttl_sec_filings_seconds: int = 3600
 
     @property
     def auth_configured(self) -> bool:
