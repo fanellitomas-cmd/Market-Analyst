@@ -30,7 +30,7 @@ from app.services import quant
 from app.services.markets import MarketsService
 from app.sources import sec
 from app.sources.errors import NotFoundError, SourceError
-from app.sources.sec import CompanyRef, Fact, Filing, SecClient, extract_facts
+from app.sources.sec import CompanyFilings, CompanyRef, Fact, Filing, SecClient, extract_facts
 
 logger = logging.getLogger(__name__)
 
@@ -173,7 +173,7 @@ class EarningsService:
         markets: MarketsService,
         tickers_cache: TTLCache[dict[str, CompanyRef]],
         facts_cache: TTLCache[dict[str, Any]],
-        filings_cache: TTLCache[list[Filing]],
+        filings_cache: TTLCache[CompanyFilings],
     ) -> None:
         self._sec = client
         self._markets = markets
@@ -200,12 +200,20 @@ class EarningsService:
             )
         return ref
 
+    async def company_filings(self, ref: CompanyRef) -> CompanyFilings:
+        return await self._filings_cache.get_or_load(
+            str(ref.cik), lambda: self._sec.submissions(ref.cik)
+        )
+
+    async def company_facts(self, ref: CompanyRef) -> dict[str, Any]:
+        return await self._facts_cache.get_or_load(
+            str(ref.cik), lambda: self._sec.company_facts(ref.cik)
+        )
+
     async def latest_release(self, ticker: str) -> datetime | None:
         """Hora (UTC) en que la SEC aceptó la última publicación de resultados (8-K ítem 2.02)."""
         ref = await self.resolve(ticker)
-        filings = await self._filings_cache.get_or_load(
-            str(ref.cik), lambda: self._sec.filings(ref.cik)
-        )
+        filings = (await self.company_filings(ref)).filings
         times = [
             f.accepted_at
             for f in filings
@@ -217,10 +225,10 @@ class EarningsService:
         ref = await self.resolve(ticker)
         facts, filings = await asyncio.gather(
             self._facts_cache.get_or_load(str(ref.cik), lambda: self._sec.company_facts(ref.cik)),
-            self._filings_cache.get_or_load(str(ref.cik), lambda: self._sec.filings(ref.cik)),
+            self.company_filings(ref),
         )
         quarters = build_quarters(facts)
-        events = await self._events(ref, filings)
+        events = await self._events(ref, filings.filings)
 
         moves = [
             abs(r.stock)

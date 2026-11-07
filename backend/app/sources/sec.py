@@ -48,6 +48,13 @@ class Filing:
     primary_document: str | None
 
 
+@dataclass(frozen=True)
+class CompanyFilings:
+    filings: list[Filing]
+    sic: int | None  # código de industria (SIC) declarado ante la SEC
+    sic_description: str | None
+
+
 def _date(raw: Any) -> date | None:
     if not isinstance(raw, str):
         return None
@@ -118,6 +125,9 @@ class SecClient:
 
     async def filings(self, cik: int) -> list[Filing]:
         """Presentaciones recientes (las ~1000 últimas que trae `submissions`)."""
+        return (await self.submissions(cik)).filings
+
+    async def submissions(self, cik: int) -> CompanyFilings:
         payload = await self._get(f"{self._data}/submissions/CIK{cik:010d}.json")
         recent = payload.get("filings", {}).get("recent") if isinstance(payload, dict) else None
         if not isinstance(recent, dict):
@@ -153,7 +163,15 @@ class SecClient:
                     primary_document=doc if isinstance(doc, str) and doc else None,
                 )
             )
-        return out
+        raw_sic = payload.get("sic")
+        try:
+            sic = int(raw_sic) if raw_sic not in (None, "") else None
+        except (TypeError, ValueError):
+            sic = None
+        sic_desc = payload.get("sicDescription")
+        return CompanyFilings(
+            filings=out, sic=sic, sic_description=sic_desc if isinstance(sic_desc, str) else None
+        )
 
 
 def _at(columns: dict[str, Any], key: str, i: int) -> Any:
@@ -161,9 +179,11 @@ def _at(columns: dict[str, Any], key: str, i: int) -> Any:
     return col[i] if isinstance(col, list) and i < len(col) else None
 
 
-def extract_facts(company_facts: dict[str, Any], concept: str, unit: str) -> list[Fact]:
-    """Todos los valores de un concepto us-gaap en una unidad ("USD", "USD/shares")."""
-    node = company_facts.get("facts", {}).get("us-gaap", {}).get(concept, {})
+def extract_facts(
+    company_facts: dict[str, Any], concept: str, unit: str, namespace: str = "us-gaap"
+) -> list[Fact]:
+    """Todos los valores de un concepto en una unidad ("USD", "USD/shares", "shares")."""
+    node = company_facts.get("facts", {}).get(namespace, {}).get(concept, {})
     rows = node.get("units", {}).get(unit, []) if isinstance(node, dict) else []
     out: list[Fact] = []
     for row in rows if isinstance(rows, list) else []:

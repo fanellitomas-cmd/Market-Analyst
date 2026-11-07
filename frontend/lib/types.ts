@@ -411,3 +411,58 @@ export interface TechnicalResponse {
   notes: string[];
   sources: SourceInfo[];
 }
+
+// ---------- Forense ----------
+
+export interface ScoreResult {
+  value: number | null;
+  zone: string | null;
+  components: Record<string, number>;
+  missing: string[];
+  note: string | null;
+}
+
+export interface YearScores {
+  fiscal_year_end: string;
+  beneish: ScoreResult;
+  altman: ScoreResult;
+  quick_ratio: number | null;
+  roic: number | null;
+  fcf: number | null;
+  sbc: number | null;
+  fcf_minus_sbc: number | null;
+  sbc_to_revenue: number | null;
+  sbc_to_fcf: number | null;
+  revenue: number | null;
+  operating_margin: number | null;
+  notes: string[];
+}
+
+export interface ForensicResponse {
+  ticker: string;
+  name: string;
+  sic: number | null;
+  sic_description: string | null;
+  altman_variant: "original" | "Z''";
+  years: YearScores[];
+  pe: {
+    current: number | null;
+    percentile: number | null;
+    median: number | null;
+    low: number | null;
+    high: number | null;
+    observations: number;
+    excluded_days: number;
+    series: { date: string; pe: number }[];
+    note: string | null;
+  };
+  wacc: {
+    value: number | null;
+    roic: number | null;
+    spread: number | null;
+    inputs: Record<string, number | null>;
+    assumptions: string[];
+    missing: string[];
+  };
+  sources: SourceInfo[];
+}

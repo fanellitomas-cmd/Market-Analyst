@@ -20,6 +20,7 @@ from app.notify.service import Notifier
 from app.services.ar_macro import ArMacroService, SeriesPoints
 from app.services.earnings import EarningsService
 from app.services.econ_calendar import EconCalendarService
+from app.services.forensic import ForensicService
 from app.services.liquidity import LiquidityService, Points
 from app.services.macro import MacroService
 from app.services.markets import MarketsService
@@ -29,7 +30,7 @@ from app.sources.argentina_markets import ArgentinaDatosClient, DolarApiClient, 
 from app.sources.bcra import BcraClient, BcraVariable
 from app.sources.forexfactory import ForexFactoryClient
 from app.sources.fred import FredClient, FredSeries
-from app.sources.sec import CompanyRef, Filing, SecClient
+from app.sources.sec import CompanyFilings, CompanyRef, SecClient
 from app.sources.worldbank import CountrySeries, WorldBankClient
 from app.sources.yahoo import PriceSeries, YahooClient
 
@@ -58,6 +59,7 @@ class Services:
     liquidity: LiquidityService
     calendar: EconCalendarService
     technical: TechnicalService
+    forensic: ForensicService
     notifier: Notifier
     engine: AsyncEngine
     sessions: async_sessionmaker[AsyncSession]
@@ -95,7 +97,7 @@ async def build_services(
                 markets,
                 TTLCache[dict[str, CompanyRef]](24 * 3600),
                 TTLCache[dict[str, Any]](settings.cache_ttl_sec_facts_seconds, max_entries=64),
-                TTLCache[list[Filing]](settings.cache_ttl_sec_filings_seconds, max_entries=64),
+                TTLCache[CompanyFilings](settings.cache_ttl_sec_filings_seconds, max_entries=64),
             )
             us = UsMacroService(clients.fred, TTLCache[FredSeries](settings.cache_ttl_fred_seconds))
             yield Services(
@@ -123,6 +125,7 @@ async def build_services(
                 ),
                 earnings=earnings,
                 technical=TechnicalService(markets, earnings),
+                forensic=ForensicService(earnings, markets, us),
                 notifier=Notifier(
                     CallMeBotWhatsApp(
                         client,

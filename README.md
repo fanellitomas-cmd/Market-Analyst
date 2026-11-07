@@ -11,7 +11,7 @@ activos contra el S&P 500 (beta, correlación, volatilidad, caídas). Todo con f
 | **Liquidez** | Balances de la Fed, el BCE y el BoJ; liquidez neta de la Fed (activos − TGA − RRP); DXY e índice amplio del dólar; spreads high yield y grado de inversión; HYG/LQD; condiciones financieras (NFCI); tasa real a 10 años; cíclicos/defensivos. Cambio a 1 mes, 3 meses y 1 año | FRED + Yahoo Finance |
 | **Argentina** | Dólar oficial, mayorista, MEP, CCL, blue, cripto y tarjeta con su brecha; evolución de oficial/MEP/CCL/blue; riesgo país; reservas, base monetaria, tasa de política, BADLAR, TAMAR, plazo fijo, inflación mensual/interanual/esperada, CER y UVA | BCRA (oficial), DolarApi y ArgentinaDatos (comunitarias) |
 | **Técnico** | Régimen del activo antes de cualquier oscilador (tendencia con EMA 20/50/200 y ADX > 25, o rango, con o sin compresión de Bollinger); AVWAP anclados en el último balance (8-K), máximo y mínimo de 52 semanas, inicio del año y una fecha a elección; perfil de volumen de 60 días (POC, VAH, VAL); volumen relativo y su desvío (σ). Gráfico de velas con TradingView Lightweight Charts | Yahoo Finance + SEC |
-| **Empresas** | Últimos 12 trimestres: ingresos, variación anual, márgenes bruto/operativo/neto, ganancia neta y por acción; reacción de la acción (y exceso sobre el SPY) a 1, 5 y 20 ruedas de cada publicación de resultados | SEC EDGAR + Yahoo Finance |
+| **Empresas** | Pestaña **Forense y valuación**: Beneish M-Score (8 variables) con sus componentes, Altman Z (original para industriales o Z'' para el resto, según el código SIC), quick ratio, ROIC frente a WACC (prima de riesgo editable), FCF menos compensación en acciones y percentil del P/E de 5 años sin mirar datos del futuro. Pestaña **Resultados**: últimos 12 trimestres: ingresos, variación anual, márgenes bruto/operativo/neto, ganancia neta y por acción; reacción de la acción (y exceso sobre el SPY) a 1, 5 y 20 ruedas de cada publicación de resultados | SEC EDGAR + Yahoo Finance |
 | **Sistema** | Estado del agente 24/7: si está activo, sus tareas programadas (hora de Buenos Aires), la última corrida de cada una, los avisos enviados por WhatsApp y botones para probar | — |
 | **Macro global** | Series históricas por indicador, comparando hasta 8 países (EE.UU., Canadá, Argentina, Brasil, México, Chile, Zona Euro, Alemania, Francia, Italia, Reino Unido, Japón, China) | Banco Mundial |
 | **Mercados** | Beta, correlación, R², rendimiento, volatilidad anualizada y caída máxima contra un benchmark (SPY, QQQ, IWM, EEM, ACWI); correlación y beta móviles; comparación de hasta 15 activos | Yahoo Finance |
@@ -123,6 +123,11 @@ cd frontend && npm run typecheck && npm run build
   reacción del precio usa los 8-K con ítem 2.02 y la hora de aceptación de la SEC para saber si
   se publicó antes, durante o después de la rueda. No incluye la sorpresa frente al consenso de
   analistas: no hay una fuente gratuita y confiable de estimados.
+- **Forense**: sale de los 10-K en XBRL. Si falta un dato, el indicador queda "—" y se listan los
+  faltantes; los pocos supuestos (0 de deuda corriente no reportada, 21 % de impuesto si la tasa
+  efectiva no se puede calcular, la prima de riesgo) se muestran al lado del resultado. El P/E
+  histórico corrige la cantidad de acciones por splits y en cada fecha usa sólo los balances ya
+  presentados.
 - **Técnico**: el AVWAP usa velas de 1 hora (Yahoo da 2 años) y el precio típico
   (máx + mín + cierre) / 3, la aproximación estándar sin datos operación por operación. El perfil
   de volumen reparte el volumen de cada vela de 30 minutos entre los precios que recorrió. El

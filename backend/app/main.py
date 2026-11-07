@@ -8,7 +8,19 @@ import httpx
 from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import ar, auth, calendar, earnings, liquidity, macro, markets, system, technical, us
+from app.api import (
+    ar,
+    auth,
+    calendar,
+    earnings,
+    forensic,
+    liquidity,
+    macro,
+    markets,
+    system,
+    technical,
+    us,
+)
 from app.container import build_services
 from app.core.config import Settings, get_settings
 from app.core.security import LoginThrottle
@@ -61,6 +73,7 @@ def create_app(
     api.include_router(liquidity.router)
     api.include_router(calendar.router)
     api.include_router(technical.router)
+    api.include_router(forensic.router)
     app.include_router(api)
 
     @app.get("/health", include_in_schema=False)

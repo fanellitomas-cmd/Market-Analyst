@@ -315,6 +315,9 @@ button.link {
 }
 .segmented {
   display: inline-flex;
+  align-self: flex-start;
+  max-width: 100%;
+  overflow-x: auto;
   border: 1px solid var(--border);
   border-radius: 8px;
   overflow: hidden;

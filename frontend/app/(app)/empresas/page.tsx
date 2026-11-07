@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { ErrorNotice, Skeleton, SourceLine } from "@/components/Common";
+import { ForensicView } from "@/components/ForensicView";
 import { LineChartCard } from "@/components/LineChartCard";
 import { api, ApiError } from "@/lib/api";
 import {
@@ -70,6 +71,7 @@ export default function EmpresasPage() {
   const [data, setData] = useState<EarningsResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [view, setView] = useState<"resultados" | "forense">("resultados");
 
   const load = useCallback(async (t: string) => {
     if (!t.trim()) return;
@@ -155,12 +157,22 @@ export default function EmpresasPage() {
             </button>
           ))}
         </div>
+        <div className="segmented" role="group" aria-label="Vista">
+          <button type="button" aria-pressed={view === "resultados"} onClick={() => setView("resultados")}>
+            Resultados y reacción
+          </button>
+          <button type="button" aria-pressed={view === "forense"} onClick={() => setView("forense")}>
+            Forense y valuación
+          </button>
+        </div>
       </section>
 
       {error && <ErrorNotice message={error} />}
       {loading && !data && <Skeleton height={360} />}
 
-      {data && (
+      {view === "forense" && data && <ForensicView ticker={data.company.ticker} />}
+
+      {view === "resultados" && data && (
         <>
           <section className="card" aria-busy={loading}>
             <div className="card-head">

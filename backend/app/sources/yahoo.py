@@ -9,7 +9,7 @@ lo trae, se cae al cierre simple y se deja constancia en `adjusted=False`.
 """
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, date, datetime, timedelta, timezone, tzinfo
 from typing import Any, Literal
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
@@ -34,6 +34,10 @@ class PriceSeries:
     closes: list[float]
     adjusted: bool
     missing_points: int
+    # Cierre ajustado sólo por splits (sin dividendos), alineado con `dates`; None si no vino.
+    split_closes: list[float] | None = None
+    # Splits del período: (fecha, factor). Un split 4:1 → 4.0.
+    splits: list[tuple[date, float]] = field(default_factory=list)
 
 
 BarInterval = Literal["1d", "1h", "30m", "15m", "5m"]
@@ -146,9 +150,14 @@ def _parse_result(symbol: str, result: dict[str, Any]) -> PriceSeries:
     gmtoffset = meta.get("gmtoffset")
     offset = timedelta(seconds=gmtoffset if isinstance(gmtoffset, int) else 0)
 
+    plain = _first_list(indicators.get("quote"), "close")
+    if plain is not None and len(plain) != len(timestamps):
+        plain = None
+
     by_date: dict[date, float] = {}
+    plain_by_date: dict[date, float] = {}
     missing = 0
-    for ts, close in zip(timestamps, closes_raw, strict=True):
+    for i, (ts, close) in enumerate(zip(timestamps, closes_raw, strict=True)):
         valid_close = isinstance(close, int | float) and not isinstance(close, bool) and close > 0
         if not isinstance(ts, int) or not valid_close:
             missing += 1
@@ -156,8 +165,33 @@ def _parse_result(symbol: str, result: dict[str, Any]) -> PriceSeries:
         # La fecha de la rueda es la de la bolsa, no la de UTC.
         day = (datetime.fromtimestamp(ts, UTC) + offset).date()
         by_date[day] = float(close)  # si se repite el día (vela en curso), gana la última
+        pc = plain[i] if plain is not None else None
+        if isinstance(pc, int | float) and not isinstance(pc, bool) and pc > 0:
+            plain_by_date[day] = float(pc)
 
     dates = sorted(by_date)
+    split_closes = (
+        [plain_by_date[d] for d in dates] if all(d in plain_by_date for d in dates) else None
+    )
+    splits: list[tuple[date, float]] = []
+    events = result.get("events")
+    raw_splits = events.get("splits") if isinstance(events, dict) else None
+    if isinstance(raw_splits, dict):
+        for item in raw_splits.values():
+            if not isinstance(item, dict):
+                continue
+            ts, num, den = item.get("date"), item.get("numerator"), item.get("denominator")
+            if (
+                (
+                    isinstance(ts, int)
+                    and isinstance(num, int | float)
+                    and isinstance(den, int | float)
+                )
+                and num > 0
+                and den > 0
+            ):
+                splits.append(((datetime.fromtimestamp(ts, UTC) + offset).date(), num / den))
+    splits.sort()
     currency = meta.get("currency")
     name = meta.get("longName") or meta.get("shortName")
     return PriceSeries(
@@ -168,6 +202,8 @@ def _parse_result(symbol: str, result: dict[str, Any]) -> PriceSeries:
         closes=[by_date[d] for d in dates],
         adjusted=adjusted,
         missing_points=missing,
+        split_closes=split_closes,
+        splits=splits,
     )
 
 
