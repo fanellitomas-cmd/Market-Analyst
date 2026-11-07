@@ -50,6 +50,7 @@ class Settings(BaseSettings):
     # SEC EDGAR (gratis). La SEC exige identificarse: "Nombre Apellido tu@email.com".
     # Vacío = la sección de resultados queda deshabilitada.
     forexfactory_base_url: str = "https://nfs.faireconomy.media"
+    okx_base_url: str = "https://www.okx.com"
     sec_user_agent: str = ""
     sec_www_url: str = "https://www.sec.gov"
     sec_data_url: str = "https://data.sec.gov"

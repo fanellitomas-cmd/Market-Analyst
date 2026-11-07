@@ -73,6 +73,16 @@ class Bars:
     missing_points: int  # velas descartadas por datos faltantes o inconsistentes
 
 
+@dataclass(frozen=True)
+class Quote:
+    symbol: str
+    price: float
+    time: datetime  # momento del último precio (UTC)
+    previous_close: float | None
+    currency: str | None
+    name: str | None
+
+
 def normalize_symbol(raw: str) -> str:
     symbol = raw.strip().upper()
     if not _SYMBOL_RE.fullmatch(symbol):
@@ -122,6 +132,25 @@ class YahooClient:
     async def get_daily_prices(self, symbol: str, price_range: PriceRange) -> PriceSeries:
         params = {"range": price_range, "interval": "1d", "events": "div,splits"}
         return _parse_result(symbol, await self._fetch_chart(symbol, params))
+
+    async def get_quote(self, symbol: str) -> Quote:
+        """Último precio (con su hora) según los metadatos del gráfico. Puede estar demorado."""
+        result = await self._fetch_chart(symbol, {"range": "5d", "interval": "1d"})
+        raw_meta = result.get("meta")
+        meta: dict[str, Any] = raw_meta if isinstance(raw_meta, dict) else {}
+        price, ts = _num(meta.get("regularMarketPrice")), meta.get("regularMarketTime")
+        if price is None or price <= 0 or not isinstance(ts, int):
+            raise SourceError(SOURCE, f"sin precio actual para {symbol}")
+        name = meta.get("longName") or meta.get("shortName")
+        currency = meta.get("currency")
+        return Quote(
+            symbol=symbol,
+            price=price,
+            time=datetime.fromtimestamp(ts, UTC),
+            previous_close=_num(meta.get("chartPreviousClose") or meta.get("previousClose")),
+            currency=currency if isinstance(currency, str) else None,
+            name=name if isinstance(name, str) else None,
+        )
 
     async def get_bars(self, symbol: str, interval: BarInterval, bar_range: str) -> Bars:
         """Velas OHLCV. Diarias: ajustadas por dividendos y splits. Intradía: sin ajustar."""

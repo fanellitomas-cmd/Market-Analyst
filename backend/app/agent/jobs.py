@@ -77,6 +77,7 @@ async def source_health(services: Services) -> JobResult:
         ("DolarApi", c.dolarapi.get_quotes()),
         ("ArgentinaDatos", c.argdatos.get_country_risk_history()),
         ("ForexFactory", c.forexfactory.this_week()),
+        ("OKX", c.okx.funding("BTC-USDT-SWAP")),
     ]
     if c.sec.configured:
         checks.append(("SEC EDGAR", c.sec.ticker_map()))

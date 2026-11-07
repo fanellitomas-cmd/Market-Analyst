@@ -171,6 +171,7 @@ def healthy_sources(router: Router) -> None:
     router.json("argdatos.test", [])
     router.json("sec.test", {})
     router.json("ff.test", [])
+    router.json("okx.test", {"code": "0", "msg": "", "data": [{"fundingRate": "0.0001"}]})
 
 
 async def test_source_health_job(
@@ -180,7 +181,7 @@ async def test_source_health_job(
     healthy_sources(router)
     result = await source_health(services)
     assert result.notify is None and not result.failed
-    assert result.detail == "8/8 fuentes responden"
+    assert result.detail == "9/9 fuentes responden"
 
     router.add("bcra.test", lambda _r: httpx.Response(503))
     result = await source_health(services)

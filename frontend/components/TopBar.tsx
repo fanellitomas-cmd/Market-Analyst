@@ -9,6 +9,7 @@ const LINKS = [
   { href: "/eeuu", label: "EE.UU." },
   { href: "/liquidez", label: "Liquidez" },
   { href: "/argentina", label: "Argentina" },
+  { href: "/centinela", label: "Centinela" },
   { href: "/macro", label: "Macro global" },
   { href: "/mercados", label: "Mercados" },
   { href: "/tecnico", label: "Técnico" },

@@ -306,6 +306,9 @@ class ArMacroService:
     async def _variables(self) -> list[BcraVariable]:
         return await self._catalog_cache.get_or_load("catalog", self._bcra.list_variables)
 
+    async def dollar_quotes(self) -> list[DollarQuote]:
+        return await self._quotes()
+
     async def _quotes(self) -> list[DollarQuote]:
         return await self._quotes_cache.get_or_load("quotes", self._dolarapi.get_quotes)
 

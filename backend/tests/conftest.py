@@ -4,7 +4,7 @@ import json
 import math
 import tempfile
 import uuid
-from collections.abc import AsyncIterator, Callable
+from collections.abc import AsyncIterator, Callable, Sequence
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
@@ -37,6 +37,7 @@ def make_settings(**overrides: Any) -> Settings:
         "sec_data_url": "https://secdata.test",
         "callmebot_base_url": "https://callmebot.test",
         "forexfactory_base_url": "https://ff.test",
+        "okx_base_url": "https://okx.test",
         # Una base nueva por app de test, en el directorio temporal del sistema.
         "database_url": f"sqlite+aiosqlite:///{tempfile.gettempdir()}/ma-test-{uuid.uuid4().hex}.db",
     }
@@ -45,10 +46,11 @@ def make_settings(**overrides: Any) -> Settings:
 
 
 def yahoo_payload(
-    closes: list[float | None], start: datetime | None = None, adj: bool = True
+    closes: Sequence[float | None], start: datetime | None = None, adj: bool = True
 ) -> dict[str, Any]:
     start = start or datetime(2024, 1, 2, 14, 30, tzinfo=UTC)
     timestamps = [int((start + timedelta(days=i)).timestamp()) for i in range(len(closes))]
+    closes = list(closes)
     indicators: dict[str, Any] = {"quote": [{"close": closes}]}
     if adj:
         indicators["adjclose"] = [{"adjclose": closes}]

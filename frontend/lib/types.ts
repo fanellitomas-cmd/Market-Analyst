@@ -489,3 +489,75 @@ export interface ScreenerResponse {
   run_at: string | null;
   rows: ScreenerRow[];
 }
+
+// ---------- Centinela ----------
+
+export interface CryptoAsset {
+  coin: string;
+  price: number | null;
+  funding_rate: number | null;
+  funding_annualized: number | null;
+  funding_avg_7d: number | null;
+  funding_reading: string | null;
+  funding_history: { t: string; v: number }[];
+  open_interest_usd: number | null;
+  open_interest_change_7d: number | null;
+  open_interest_history: { t: string; v: number }[];
+  long_short_ratio: number | null;
+  long_short_change_24h: number | null;
+  liq_long_usd: number | null;
+  liq_short_usd: number | null;
+  liq_count: number;
+  liq_since: string | null;
+  errors: string[];
+}
+
+export interface CryptoResponse {
+  assets: CryptoAsset[];
+  exchange: string;
+  computed_at: string;
+}
+
+export interface MarketRow {
+  symbol: string;
+  name: string;
+  group: string;
+  last: number | null;
+  date: string | null;
+  changes: { label: string; value: number | null }[];
+  spark: number[];
+  error: string | null;
+}
+
+export interface CommoditiesResponse {
+  rows: MarketRow[];
+  copper_gold: { t: string; v: number }[];
+  copper_gold_change_3m: number | null;
+  note: string;
+  computed_at: string;
+}
+
+export interface ArbRow {
+  kind: "ADR" | "CEDEAR";
+  foreign: string;
+  local: string;
+  name: string | null;
+  ratio: number;
+  foreign_price: number | null;
+  local_price: number | null;
+  foreign_time: string | null;
+  local_time: string | null;
+  implied_fx: number | null;
+  vs_ccl: number | null;
+  vs_median: number | null;
+  comparable: boolean;
+  note: string | null;
+}
+
+export interface ArbitrageResponse {
+  rows: ArbRow[];
+  ccl_market: number | null;
+  ccl_median_implied: number | null;
+  cedear_ratios: { local: string; foreign: string; ratio: number }[];
+  computed_at: string;
+}

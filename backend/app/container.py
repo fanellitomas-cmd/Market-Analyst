@@ -25,12 +25,14 @@ from app.services.liquidity import LiquidityService, Points
 from app.services.macro import MacroService
 from app.services.markets import MarketsService
 from app.services.screener import ScreenerService
+from app.services.sentinel import SentinelService
 from app.services.technical import TechnicalService
 from app.services.us_macro import UsMacroService
 from app.sources.argentina_markets import ArgentinaDatosClient, DolarApiClient, DollarQuote
 from app.sources.bcra import BcraClient, BcraVariable
 from app.sources.forexfactory import ForexFactoryClient
 from app.sources.fred import FredClient, FredSeries
+from app.sources.okx import OkxClient
 from app.sources.sec import CompanyFilings, CompanyRef, SecClient
 from app.sources.worldbank import CountrySeries, WorldBankClient
 from app.sources.yahoo import PriceSeries, YahooClient
@@ -46,6 +48,7 @@ class Clients:
     argdatos: ArgentinaDatosClient
     sec: SecClient
     forexfactory: ForexFactoryClient
+    okx: OkxClient
 
 
 @dataclass
@@ -62,6 +65,7 @@ class Services:
     technical: TechnicalService
     forensic: ForensicService
     screener: ScreenerService
+    sentinel: SentinelService
     notifier: Notifier
     engine: AsyncEngine
     sessions: async_sessionmaker[AsyncSession]
@@ -90,6 +94,7 @@ async def build_services(
                     client, settings.sec_www_url, settings.sec_data_url, settings.sec_user_agent
                 ),
                 forexfactory=ForexFactoryClient(client, settings.forexfactory_base_url),
+                okx=OkxClient(client, settings.okx_base_url),
             )
             markets = MarketsService(
                 clients.yahoo, TTLCache[PriceSeries](settings.cache_ttl_prices_seconds)
@@ -103,6 +108,14 @@ async def build_services(
             )
             us = UsMacroService(clients.fred, TTLCache[FredSeries](settings.cache_ttl_fred_seconds))
             forensic = ForensicService(earnings, markets, us)
+            ar = ArMacroService(
+                clients.bcra,
+                clients.dolarapi,
+                clients.argdatos,
+                TTLCache[list[BcraVariable]](settings.cache_ttl_bcra_seconds),
+                TTLCache[list[DollarQuote]](settings.cache_ttl_dollar_quotes_seconds),
+                TTLCache[SeriesPoints](settings.cache_ttl_ar_series_seconds),
+            )
             yield Services(
                 settings=settings,
                 clients=clients,
@@ -118,14 +131,8 @@ async def build_services(
                     markets,
                     TTLCache[tuple[Points, str | None]](settings.cache_ttl_prices_seconds),
                 ),
-                ar=ArMacroService(
-                    clients.bcra,
-                    clients.dolarapi,
-                    clients.argdatos,
-                    TTLCache[list[BcraVariable]](settings.cache_ttl_bcra_seconds),
-                    TTLCache[list[DollarQuote]](settings.cache_ttl_dollar_quotes_seconds),
-                    TTLCache[SeriesPoints](settings.cache_ttl_ar_series_seconds),
-                ),
+                ar=ar,
+                sentinel=SentinelService(clients.okx, clients.yahoo, markets, ar, sessions),
                 earnings=earnings,
                 technical=TechnicalService(markets, earnings),
                 forensic=forensic,

@@ -14,6 +14,7 @@ activos contra el S&P 500 (beta, correlación, volatilidad, caídas). Todo con f
 | **Empresas** | Pestaña **Forense y valuación**: Beneish M-Score (8 variables) con sus componentes, Altman Z (original para industriales o Z'' para el resto, según el código SIC), quick ratio, ROIC frente a WACC (prima de riesgo editable), FCF menos compensación en acciones y percentil del P/E de 5 años sin mirar datos del futuro. Pestaña **Resultados**: últimos 12 trimestres: ingresos, variación anual, márgenes bruto/operativo/neto, ganancia neta y por acción; reacción de la acción (y exceso sobre el SPY) a 1, 5 y 20 ruedas de cada publicación de resultados | SEC EDGAR + Yahoo Finance |
 | **Screener** | GARP sobre un universo editable (hasta 150 empresas): P/E < 20, ingresos +20 % anual en 5 años, margen operativo en expansión y ROIC > WACC, con cumple / no cumple / sin dato por criterio | SEC + Yahoo + FRED |
 | **Sistema** | Estado del agente 24/7: si está activo, sus tareas programadas (hora de Buenos Aires), la última corrida de cada una, los avisos enviados por WhatsApp y botones para probar | — |
+| **Centinela** | Perpetuos de BTC, ETH y SOL: financiamiento (actual, anualizado y promedio de 7 días), interés abierto, cuentas largas/cortas y liquidaciones de 24 h. Petróleo, gas, cobre, oro, plata, granos y monedas con cambios y mini gráficos; cociente cobre/oro. CCL implícito de 13 ADRs argentinos y de los CEDEARs que cargues, contra el CCL de mercado y la mediana | OKX, Yahoo Finance, DolarApi |
 | **Macro global** | Series históricas por indicador, comparando hasta 8 países (EE.UU., Canadá, Argentina, Brasil, México, Chile, Zona Euro, Alemania, Francia, Italia, Reino Unido, Japón, China) | Banco Mundial |
 | **Mercados** | Beta, correlación, R², rendimiento, volatilidad anualizada y caída máxima contra un benchmark (SPY, QQQ, IWM, EEM, ACWI); correlación y beta móviles; comparación de hasta 15 activos | Yahoo Finance |
 
@@ -131,6 +132,10 @@ cd frontend && npm run typecheck && npm run build
   efectiva no se puede calcular, la prima de riesgo) se muestran al lado del resultado. El P/E
   histórico corrige la cantidad de acciones por splits y en cada fecha usa sólo los balances ya
   presentados.
+- **Centinela**: OKX es un solo exchange (no el total del mercado); el mapa de liquidaciones de
+  todo el mercado es pago. Los ratios de los ADRs están en `app/services/sentinel.py` y se ven en la
+  página; los de CEDEARs los cargás vos porque cambian. Sólo se comparan precios local y exterior
+  tomados con menos de 2 horas de diferencia (Yahoo publica BYMA con demora).
 - **Técnico**: el AVWAP usa velas de 1 hora (Yahoo da 2 años) y el precio típico
   (máx + mín + cierre) / 3, la aproximación estándar sin datos operación por operación. El perfil
   de volumen reparte el volumen de cada vela de 30 minutos entre los precios que recorrió. El
