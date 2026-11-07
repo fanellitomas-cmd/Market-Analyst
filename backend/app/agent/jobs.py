@@ -141,6 +141,31 @@ async def econ_actuals(services: Services) -> JobResult:
     )
 
 
+# ---------- Tarea: screener GARP ----------
+
+
+async def garp_screener(services: Services) -> JobResult:
+    if not services.forensic.configured:
+        return JobResult(detail="sin SEC_USER_AGENT: el screener no puede leer balances")
+    rows, entered = await services.screener.run()
+    ok = sum(1 for r in rows if r.error is None)
+    passing = [r.ticker for r in rows if r.passes]
+    detail = f"{ok}/{len(rows)} empresas analizadas; cumplen todo: " + (
+        ", ".join(passing) if passing else "ninguna"
+    )
+    if not entered:
+        return JobResult(detail=detail)
+    lines = []
+    for r in rows:
+        if r.ticker in entered:
+            facts = " · ".join(c.detail for c in r.criteria)
+            lines.append(f"• {r.ticker} ({r.name}): {facts}")
+    return JobResult(
+        detail=detail,
+        notify="🔎 Screener GARP: nuevas empresas que cumplen los 4 criterios\n" + "\n".join(lines),
+    )
+
+
 JOBS: list[JobSpec] = [
     JobSpec(
         id="salud_fuentes",
@@ -167,6 +192,15 @@ JOBS: list[JobSpec] = [
         schedule="Días hábiles, 10:05, 11:05, 12:05 y 17:05",
         cron={"day_of_week": "mon-fri", "hour": "10,11,12,17", "minute": 5},
         func=econ_actuals,
+    ),
+    JobSpec(
+        id="screener_garp",
+        name="Screener GARP",
+        description="Analiza el universo de empresas con el motor forense y avisa sólo cuando una "
+        "empresa entra al filtro.",
+        schedule="Días hábiles, 21:00",
+        cron={"day_of_week": "mon-fri", "hour": 21, "minute": 0},
+        func=garp_screener,
     ),
     JobSpec(
         id="latido_semanal",

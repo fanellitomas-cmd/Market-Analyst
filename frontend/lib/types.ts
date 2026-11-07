@@ -466,3 +466,26 @@ export interface ForensicResponse {
   };
   sources: SourceInfo[];
 }
+
+// ---------- Screener ----------
+
+export interface ScreenerRow {
+  ticker: string;
+  name: string | null;
+  passes: boolean;
+  met: number;
+  pe: number | null;
+  revenue_cagr_5y: number | null;
+  operating_margin: number | null;
+  operating_margin_prev: number | null;
+  roic: number | null;
+  wacc: number | null;
+  criteria: { name: string; status: "cumple" | "no cumple" | "sin dato"; detail: string }[];
+  error: string | null;
+}
+
+export interface ScreenerResponse {
+  universe: string[];
+  run_at: string | null;
+  rows: ScreenerRow[];
+}

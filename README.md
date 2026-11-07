@@ -12,6 +12,7 @@ activos contra el S&P 500 (beta, correlación, volatilidad, caídas). Todo con f
 | **Argentina** | Dólar oficial, mayorista, MEP, CCL, blue, cripto y tarjeta con su brecha; evolución de oficial/MEP/CCL/blue; riesgo país; reservas, base monetaria, tasa de política, BADLAR, TAMAR, plazo fijo, inflación mensual/interanual/esperada, CER y UVA | BCRA (oficial), DolarApi y ArgentinaDatos (comunitarias) |
 | **Técnico** | Régimen del activo antes de cualquier oscilador (tendencia con EMA 20/50/200 y ADX > 25, o rango, con o sin compresión de Bollinger); AVWAP anclados en el último balance (8-K), máximo y mínimo de 52 semanas, inicio del año y una fecha a elección; perfil de volumen de 60 días (POC, VAH, VAL); volumen relativo y su desvío (σ). Gráfico de velas con TradingView Lightweight Charts | Yahoo Finance + SEC |
 | **Empresas** | Pestaña **Forense y valuación**: Beneish M-Score (8 variables) con sus componentes, Altman Z (original para industriales o Z'' para el resto, según el código SIC), quick ratio, ROIC frente a WACC (prima de riesgo editable), FCF menos compensación en acciones y percentil del P/E de 5 años sin mirar datos del futuro. Pestaña **Resultados**: últimos 12 trimestres: ingresos, variación anual, márgenes bruto/operativo/neto, ganancia neta y por acción; reacción de la acción (y exceso sobre el SPY) a 1, 5 y 20 ruedas de cada publicación de resultados | SEC EDGAR + Yahoo Finance |
+| **Screener** | GARP sobre un universo editable (hasta 150 empresas): P/E < 20, ingresos +20 % anual en 5 años, margen operativo en expansión y ROIC > WACC, con cumple / no cumple / sin dato por criterio | SEC + Yahoo + FRED |
 | **Sistema** | Estado del agente 24/7: si está activo, sus tareas programadas (hora de Buenos Aires), la última corrida de cada una, los avisos enviados por WhatsApp y botones para probar | — |
 | **Macro global** | Series históricas por indicador, comparando hasta 8 países (EE.UU., Canadá, Argentina, Brasil, México, Chile, Zona Euro, Alemania, Francia, Italia, Reino Unido, Japón, China) | Banco Mundial |
 | **Mercados** | Beta, correlación, R², rendimiento, volatilidad anualizada y caída máxima contra un benchmark (SPY, QQQ, IWM, EEM, ACWI); correlación y beta móviles; comparación de hasta 15 activos | Yahoo Finance |
@@ -38,6 +39,8 @@ Tareas actuales:
 - **Datos publicados y sorpresas** (días hábiles 10:05, 11:05, 12:05 y 17:05): toma el dato real
   de FRED apenas sale y avisa sólo si se desvía del pronóstico más que el umbral del indicador
   (por ejemplo, 0,1 p.p. en el IPC o 50 mil en el NFP). Cada sorpresa se avisa una sola vez.
+- **Screener GARP** (días hábiles 21:00): analiza el universo con el motor forense y avisa sólo
+  cuando una empresa entra al filtro.
 - **Latido semanal** (lunes 08:00): confirma que el agente sigue vivo, con un resumen de la semana.
 
 Para instalarlo en tu PC o en un servidor gratuito, ver **[DEPLOY.md](DEPLOY.md)**.

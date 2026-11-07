@@ -17,6 +17,7 @@ from app.api import (
     liquidity,
     macro,
     markets,
+    screener,
     system,
     technical,
     us,
@@ -74,6 +75,7 @@ def create_app(
     api.include_router(calendar.router)
     api.include_router(technical.router)
     api.include_router(forensic.router)
+    api.include_router(screener.router)
     app.include_router(api)
 
     @app.get("/health", include_in_schema=False)

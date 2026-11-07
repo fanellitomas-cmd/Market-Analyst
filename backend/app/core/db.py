@@ -80,6 +80,18 @@ class EconEvent(Base):
     notified: Mapped[bool] = mapped_column(Boolean, default=False)
 
 
+class ScreenerResult(Base):
+    """Resultado de una empresa en una corrida del screener (se guarda el historial)."""
+
+    __tablename__ = "screener_results"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    run_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    ticker: Mapped[str] = mapped_column(String(16))
+    passes: Mapped[bool] = mapped_column(Boolean)
+    payload: Mapped[str] = mapped_column(Text)  # ScreenerRow en JSON
+
+
 def make_engine(url: str) -> AsyncEngine:
     if url.startswith("sqlite") and ":///" in url:
         path = url.split(":///", 1)[1]

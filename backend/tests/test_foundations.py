@@ -209,6 +209,7 @@ async def test_system_status_and_notify(wa_client: httpx.AsyncClient, router: Ro
         "salud_fuentes",
         "calendario_economico",
         "datos_publicados",
+        "screener_garp",
         "latido_semanal",
     }
     assert jobs["latido_semanal"]["next_run"].endswith("-03:00")  # hora de Buenos Aires

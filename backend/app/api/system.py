@@ -162,6 +162,7 @@ async def notify_test(user: CurrentUser, services: ServicesDep) -> NotificationO
 
 
 @router.post("/jobs/{job_id}/run", response_model=JobRunOut)
+# El screener puede tardar varios minutos con universos grandes: la respuesta espera a que termine.
 async def run_now(_: CurrentUser, services: ServicesDep, job_id: str) -> JobRunOut:
     spec = JOBS_BY_ID.get(job_id)
     if spec is None:

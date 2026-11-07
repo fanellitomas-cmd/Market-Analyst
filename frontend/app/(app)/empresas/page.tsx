@@ -88,7 +88,12 @@ export default function EmpresasPage() {
   }, []);
 
   useEffect(() => {
-    void load("AAPL");
+    // Permite llegar desde el screener: /empresas?ticker=MSFT&vista=forense
+    const params = new URLSearchParams(window.location.search);
+    const initial = (params.get("ticker") ?? "AAPL").toUpperCase();
+    if (params.get("vista") === "forense") setView("forense");
+    setTicker(initial);
+    void load(initial);
   }, [load]);
 
   const chronological: QuarterRow[] = useMemo(

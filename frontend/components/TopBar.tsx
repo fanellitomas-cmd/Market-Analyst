@@ -13,6 +13,7 @@ const LINKS = [
   { href: "/mercados", label: "Mercados" },
   { href: "/tecnico", label: "Técnico" },
   { href: "/empresas", label: "Empresas" },
+  { href: "/screener", label: "Screener" },
   { href: "/sistema", label: "Sistema" },
 ];
 

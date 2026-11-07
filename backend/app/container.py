@@ -24,6 +24,7 @@ from app.services.forensic import ForensicService
 from app.services.liquidity import LiquidityService, Points
 from app.services.macro import MacroService
 from app.services.markets import MarketsService
+from app.services.screener import ScreenerService
 from app.services.technical import TechnicalService
 from app.services.us_macro import UsMacroService
 from app.sources.argentina_markets import ArgentinaDatosClient, DolarApiClient, DollarQuote
@@ -60,6 +61,7 @@ class Services:
     calendar: EconCalendarService
     technical: TechnicalService
     forensic: ForensicService
+    screener: ScreenerService
     notifier: Notifier
     engine: AsyncEngine
     sessions: async_sessionmaker[AsyncSession]
@@ -100,6 +102,7 @@ async def build_services(
                 TTLCache[CompanyFilings](settings.cache_ttl_sec_filings_seconds, max_entries=64),
             )
             us = UsMacroService(clients.fred, TTLCache[FredSeries](settings.cache_ttl_fred_seconds))
+            forensic = ForensicService(earnings, markets, us)
             yield Services(
                 settings=settings,
                 clients=clients,
@@ -125,7 +128,8 @@ async def build_services(
                 ),
                 earnings=earnings,
                 technical=TechnicalService(markets, earnings),
-                forensic=ForensicService(earnings, markets, us),
+                forensic=forensic,
+                screener=ScreenerService(forensic, sessions),
                 notifier=Notifier(
                     CallMeBotWhatsApp(
                         client,
