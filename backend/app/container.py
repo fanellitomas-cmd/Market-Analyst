@@ -24,12 +24,14 @@ from app.services.forensic import ForensicService
 from app.services.liquidity import LiquidityService, Points
 from app.services.macro import MacroService
 from app.services.markets import MarketsService
+from app.services.options import OptionsService
 from app.services.screener import ScreenerService
 from app.services.sentinel import SentinelService
 from app.services.technical import TechnicalService
 from app.services.us_macro import UsMacroService
 from app.sources.argentina_markets import ArgentinaDatosClient, DolarApiClient, DollarQuote
 from app.sources.bcra import BcraClient, BcraVariable
+from app.sources.cboe import CboeClient
 from app.sources.forexfactory import ForexFactoryClient
 from app.sources.fred import FredClient, FredSeries
 from app.sources.okx import OkxClient
@@ -49,6 +51,7 @@ class Clients:
     sec: SecClient
     forexfactory: ForexFactoryClient
     okx: OkxClient
+    cboe: CboeClient
 
 
 @dataclass
@@ -66,6 +69,7 @@ class Services:
     forensic: ForensicService
     screener: ScreenerService
     sentinel: SentinelService
+    options: OptionsService
     notifier: Notifier
     engine: AsyncEngine
     sessions: async_sessionmaker[AsyncSession]
@@ -95,6 +99,7 @@ async def build_services(
                 ),
                 forexfactory=ForexFactoryClient(client, settings.forexfactory_base_url),
                 okx=OkxClient(client, settings.okx_base_url),
+                cboe=CboeClient(client, settings.cboe_base_url),
             )
             markets = MarketsService(
                 clients.yahoo, TTLCache[PriceSeries](settings.cache_ttl_prices_seconds)
@@ -133,6 +138,7 @@ async def build_services(
                 ),
                 ar=ar,
                 sentinel=SentinelService(clients.okx, clients.yahoo, markets, ar, sessions),
+                options=OptionsService(clients.cboe, sessions),
                 earnings=earnings,
                 technical=TechnicalService(markets, earnings),
                 forensic=forensic,

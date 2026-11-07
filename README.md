@@ -11,6 +11,7 @@ activos contra el S&P 500 (beta, correlación, volatilidad, caídas). Todo con f
 | **Liquidez** | Balances de la Fed, el BCE y el BoJ; liquidez neta de la Fed (activos − TGA − RRP); DXY e índice amplio del dólar; spreads high yield y grado de inversión; HYG/LQD; condiciones financieras (NFCI); tasa real a 10 años; cíclicos/defensivos. Cambio a 1 mes, 3 meses y 1 año | FRED + Yahoo Finance |
 | **Argentina** | Dólar oficial, mayorista, MEP, CCL, blue, cripto y tarjeta con su brecha; evolución de oficial/MEP/CCL/blue; riesgo país; reservas, base monetaria, tasa de política, BADLAR, TAMAR, plazo fijo, inflación mensual/interanual/esperada, CER y UVA | BCRA (oficial), DolarApi y ArgentinaDatos (comunitarias) |
 | **Técnico** | Régimen del activo antes de cualquier oscilador (tendencia con EMA 20/50/200 y ADX > 25, o rango, con o sin compresión de Bollinger); AVWAP anclados en el último balance (8-K), máximo y mínimo de 52 semanas, inicio del año y una fecha a elección; perfil de volumen de 60 días (POC, VAH, VAL); volumen relativo y su desvío (σ). Gráfico de velas con TradingView Lightweight Charts | Yahoo Finance + SEC |
+| **Opciones** | GEX total y por strike, zero gamma, muros de calls y puts, put/call; movimiento implícito por vencimiento (straddle ATM); foto diaria del interés abierto con su lectura (suba con posiciones nuevas o con cierre de cortos) | CBOE (demorado) |
 | **Empresas** | Pestaña **Forense y valuación**: Beneish M-Score (8 variables) con sus componentes, Altman Z (original para industriales o Z'' para el resto, según el código SIC), quick ratio, ROIC frente a WACC (prima de riesgo editable), FCF menos compensación en acciones y percentil del P/E de 5 años sin mirar datos del futuro. Pestaña **Resultados**: últimos 12 trimestres: ingresos, variación anual, márgenes bruto/operativo/neto, ganancia neta y por acción; reacción de la acción (y exceso sobre el SPY) a 1, 5 y 20 ruedas de cada publicación de resultados | SEC EDGAR + Yahoo Finance |
 | **Screener** | GARP sobre un universo editable (hasta 150 empresas): P/E < 20, ingresos +20 % anual en 5 años, margen operativo en expansión y ROIC > WACC, con cumple / no cumple / sin dato por criterio | SEC + Yahoo + FRED |
 | **Sistema** | Estado del agente 24/7: si está activo, sus tareas programadas (hora de Buenos Aires), la última corrida de cada una, los avisos enviados por WhatsApp y botones para probar | — |
@@ -40,6 +41,8 @@ Tareas actuales:
 - **Datos publicados y sorpresas** (días hábiles 10:05, 11:05, 12:05 y 17:05): toma el dato real
   de FRED apenas sale y avisa sólo si se desvía del pronóstico más que el umbral del indicador
   (por ejemplo, 0,1 p.p. en el IPC o 50 mil en el NFP). Cada sorpresa se avisa una sola vez.
+- **Foto de opciones** (días hábiles de NY, 18:30): guarda GEX e interés abierto de una lista
+  editable y avisa sólo si un activo pasa de gamma positiva a negativa (o al revés).
 - **Screener GARP** (días hábiles 21:00): analiza el universo con el motor forense y avisa sólo
   cuando una empresa entra al filtro.
 - **Latido semanal** (lunes 08:00): confirma que el agente sigue vivo, con un resumen de la semana.
@@ -136,6 +139,9 @@ cd frontend && npm run typecheck && npm run build
   todo el mercado es pago. Los ratios de los ADRs están en `app/services/sentinel.py` y se ven en la
   página; los de CEDEARs los cargás vos porque cambian. Sólo se comparan precios local y exterior
   tomados con menos de 2 horas de diferencia (Yahoo publica BYMA con demora).
+- **Opciones**: cadenas demoradas (~15 min) de CBOE. El GEX supone que los market makers están
+  comprados en calls y vendidos en puts (el supuesto estándar); la gamma se recalcula con
+  Black-Scholes y la volatilidad implícita de cada contrato.
 - **Técnico**: el AVWAP usa velas de 1 hora (Yahoo da 2 años) y el precio típico
   (máx + mín + cierre) / 3, la aproximación estándar sin datos operación por operación. El perfil
   de volumen reparte el volumen de cada vela de 30 minutos entre los precios que recorrió. El

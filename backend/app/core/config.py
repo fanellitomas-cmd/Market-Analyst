@@ -51,6 +51,7 @@ class Settings(BaseSettings):
     # Vacío = la sección de resultados queda deshabilitada.
     forexfactory_base_url: str = "https://nfs.faireconomy.media"
     okx_base_url: str = "https://www.okx.com"
+    cboe_base_url: str = "https://cdn.cboe.com"
     sec_user_agent: str = ""
     sec_www_url: str = "https://www.sec.gov"
     sec_data_url: str = "https://data.sec.gov"

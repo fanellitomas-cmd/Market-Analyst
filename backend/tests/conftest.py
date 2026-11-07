@@ -38,6 +38,7 @@ def make_settings(**overrides: Any) -> Settings:
         "callmebot_base_url": "https://callmebot.test",
         "forexfactory_base_url": "https://ff.test",
         "okx_base_url": "https://okx.test",
+        "cboe_base_url": "https://cboe.test",
         # Una base nueva por app de test, en el directorio temporal del sistema.
         "database_url": f"sqlite+aiosqlite:///{tempfile.gettempdir()}/ma-test-{uuid.uuid4().hex}.db",
     }

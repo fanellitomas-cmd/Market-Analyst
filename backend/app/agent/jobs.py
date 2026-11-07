@@ -78,6 +78,7 @@ async def source_health(services: Services) -> JobResult:
         ("ArgentinaDatos", c.argdatos.get_country_risk_history()),
         ("ForexFactory", c.forexfactory.this_week()),
         ("OKX", c.okx.funding("BTC-USDT-SWAP")),
+        ("CBOE", c.cboe.chain("SPY")),
     ]
     if c.sec.configured:
         checks.append(("SEC EDGAR", c.sec.ticker_map()))
@@ -167,6 +168,29 @@ async def garp_screener(services: Services) -> JobResult:
     )
 
 
+# ---------- Tarea: foto diaria de opciones ----------
+
+
+async def options_snapshot(services: Services) -> JobResult:
+    from app.services.options import regime_flip_message
+
+    ok, failed, alerts = [], [], []
+    for symbol in await services.options.watchlist():
+        try:
+            cur, prev = await services.options.snapshot(symbol)
+        except SourceError as exc:
+            failed.append(f"{symbol} ({exc.message})")
+            continue
+        ok.append(symbol)
+        msg = regime_flip_message(cur.symbol, cur, prev)
+        if msg:
+            alerts.append(msg)
+    detail = f"{len(ok)} fotos guardadas" + (f"; fallaron: {', '.join(failed)}" if failed else "")
+    return JobResult(
+        detail=detail, notify="\n".join(alerts) if alerts else None, failed=bool(failed) and not ok
+    )
+
+
 JOBS: list[JobSpec] = [
     JobSpec(
         id="salud_fuentes",
@@ -193,6 +217,16 @@ JOBS: list[JobSpec] = [
         schedule="Días hábiles, 10:05, 11:05, 12:05 y 17:05",
         cron={"day_of_week": "mon-fri", "hour": "10,11,12,17", "minute": 5},
         func=econ_actuals,
+    ),
+    JobSpec(
+        id="opciones_cierre",
+        name="Foto de opciones al cierre",
+        description="Guarda GEX e interés abierto de la lista de opciones y avisa sólo si un "
+        "activo cambia de gamma positiva a negativa (o al revés).",
+        schedule="Días hábiles de NY, 18:30",
+        cron={"day_of_week": "mon-fri", "hour": 18, "minute": 30},
+        func=options_snapshot,
+        trading_days_only=True,
     ),
     JobSpec(
         id="screener_garp",

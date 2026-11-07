@@ -561,3 +561,31 @@ export interface ArbitrageResponse {
   cedear_ratios: { local: string; foreign: string; ratio: number }[];
   computed_at: string;
 }
+
+// ---------- Opciones ----------
+
+export interface OptionsResponse {
+  symbol: string;
+  spot: number;
+  as_of: string | null;
+  total_gex: number;
+  regime: string;
+  zero_gamma: number | null;
+  call_wall: number | null;
+  put_wall: number | null;
+  put_call_oi: number | null;
+  call_oi: number;
+  put_oi: number;
+  by_strike: { strike: number; calls: number; puts: number; total: number; call_oi: number; put_oi: number }[];
+  implied_moves: { expiry: string; days: number; strike: number; straddle: number; move: number; low: number; high: number }[];
+  excluded_contracts: number;
+  history: { date: string; spot: number; call_oi: number; put_oi: number; total_gex: number; zero_gamma: number | null }[];
+  oi_reading: {
+    since: string;
+    price_change: number;
+    call_oi_change: number | null;
+    put_oi_change: number | null;
+    reading: string;
+  } | null;
+  source: SourceInfo;
+}

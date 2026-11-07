@@ -610,3 +610,20 @@ td.left {
   margin: 0;
   text-align: right;
 }
+
+/* Con muchas secciones, en pantallas anchas el menú pasa a dos líneas en vez de esconderse. */
+@media (min-width: 900px) {
+  .topbar-inner {
+    height: auto;
+    min-height: 56px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+  .nav {
+    flex-wrap: wrap;
+    overflow: visible;
+  }
+  .nav a {
+    padding: 5px 10px;
+  }
+}

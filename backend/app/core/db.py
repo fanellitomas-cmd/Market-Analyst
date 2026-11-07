@@ -92,6 +92,23 @@ class ScreenerResult(Base):
     payload: Mapped[str] = mapped_column(Text)  # ScreenerRow en JSON
 
 
+class OptionSnapshot(Base):
+    """Foto diaria de las opciones de un activo: base para ver cómo cambia el interés abierto."""
+
+    __tablename__ = "option_snapshots"
+    __table_args__ = (UniqueConstraint("symbol", "date"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    symbol: Mapped[str] = mapped_column(String(16), index=True)
+    date: Mapped[date] = mapped_column(Date)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    spot: Mapped[float] = mapped_column(Float, default=0.0)
+    call_oi: Mapped[float] = mapped_column(Float, default=0.0)
+    put_oi: Mapped[float] = mapped_column(Float, default=0.0)
+    total_gex: Mapped[float] = mapped_column(Float, default=0.0)
+    zero_gamma: Mapped[float | None] = mapped_column(Float)
+
+
 def make_engine(url: str) -> AsyncEngine:
     if url.startswith("sqlite") and ":///" in url:
         path = url.split(":///", 1)[1]
