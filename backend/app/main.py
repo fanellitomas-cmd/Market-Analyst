@@ -11,6 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api import (
     ar,
     auth,
+    cadence,
     calendar,
     earnings,
     forensic,
@@ -22,6 +23,7 @@ from app.api import (
     sentinel,
     system,
     technical,
+    thesis,
     us,
 )
 from app.container import build_services
@@ -80,6 +82,8 @@ def create_app(
     api.include_router(screener.router)
     api.include_router(sentinel.router)
     api.include_router(options.router)
+    api.include_router(thesis.router)
+    api.include_router(cadence.router)
     app.include_router(api)
 
     @app.get("/health", include_in_schema=False)

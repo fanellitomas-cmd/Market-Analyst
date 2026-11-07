@@ -109,6 +109,57 @@ class OptionSnapshot(Base):
     zero_gamma: Mapped[float | None] = mapped_column(Float)
 
 
+class Thesis(Base):
+    """Tesis de inversión con su kill switch doble (fundamental y técnico)."""
+
+    __tablename__ = "theses"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    ticker: Mapped[str] = mapped_column(String(16), index=True)
+    status: Mapped[str] = mapped_column(String(16), default="activa")  # activa|invalidada|cerrada
+    hypothesis: Mapped[str] = mapped_column(Text)  # hipótesis de desalineación
+    min_operating_margin: Mapped[float] = mapped_column(Float)  # % (kill switch fundamental)
+    support: Mapped[float] = mapped_column(Float)  # nivel estructural (kill switch técnico)
+    use_earnings_avwap: Mapped[bool] = mapped_column(Boolean, default=True)
+    entry_price: Mapped[float | None] = mapped_column(Float)
+    notes: Mapped[str | None] = mapped_column(Text)
+    # Último trimestre conocido al crear la tesis: el kill switch fundamental mira el siguiente.
+    baseline_quarter_end: Mapped[date | None] = mapped_column(Date)
+    last_check_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_check: Mapped[str | None] = mapped_column(Text)  # JSON con el resultado
+    closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    close_reason: Mapped[str | None] = mapped_column(Text)
+
+
+class Report(Base):
+    """Entregables de la cadencia (pre-market, cierre) guardados como JSON."""
+
+    __tablename__ = "reports"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    kind: Mapped[str] = mapped_column(String(32), index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    payload: Mapped[str] = mapped_column(Text)
+
+
+class TriggerLog(Base):
+    """Alertas de asimetría intradía (una por activo, tipo y día como máximo)."""
+
+    __tablename__ = "trigger_log"
+    __table_args__ = (UniqueConstraint("ticker", "kind", "day", "ref"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    day: Mapped[date] = mapped_column(Date, index=True)
+    ticker: Mapped[str] = mapped_column(String(16))
+    kind: Mapped[str] = mapped_column(String(16))  # volumen | 8-K
+    ref: Mapped[str] = mapped_column(String(64), default="")  # número de presentación, nivel...
+    fact: Mapped[str] = mapped_column(Text)
+    cause: Mapped[str] = mapped_column(Text)
+    stop: Mapped[str] = mapped_column(Text)
+
+
 def make_engine(url: str) -> AsyncEngine:
     if url.startswith("sqlite") and ":///" in url:
         path = url.split(":///", 1)[1]

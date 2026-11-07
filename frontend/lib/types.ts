@@ -589,3 +589,115 @@ export interface OptionsResponse {
   } | null;
   source: SourceInfo;
 }
+
+// ---------- Cadencia y tesis ----------
+
+export interface CheckItem {
+  group: "fundamental" | "técnica";
+  name: string;
+  status: "cumple" | "no cumple" | "sin dato";
+  detail: string;
+}
+
+export interface ThesisCheck {
+  checked_at: string;
+  close: number | null;
+  regime: string | null;
+  checks: CheckItem[];
+  kill_fundamental: { triggered: boolean; detail: string };
+  kill_technical: { triggered: boolean; detail: string };
+  warnings: string[];
+}
+
+export interface ThesisOut {
+  id: number;
+  created_at: string;
+  ticker: string;
+  status: "activa" | "invalidada" | "cerrada";
+  hypothesis: string;
+  min_operating_margin: number;
+  support: number;
+  use_earnings_avwap: boolean;
+  entry_price: number | null;
+  notes: string | null;
+  baseline_quarter_end: string | null;
+  last_check: ThesisCheck | null;
+  closed_at: string | null;
+  close_reason: string | null;
+}
+
+export interface QuoteRow {
+  symbol: string;
+  name: string;
+  group: string;
+  price: number | null;
+  change: number | null;
+  time: string | null;
+  error: string | null;
+}
+
+export interface LevelRow {
+  ticker: string;
+  close: number | null;
+  regime: string | null;
+  avwap_earnings: number | null;
+  avwap_high: number | null;
+  avwap_low: number | null;
+  poc: number | null;
+  vah: number | null;
+  val: number | null;
+  zero_gamma: number | null;
+  implied_move: number | null;
+  implied_expiry: string | null;
+  errors: string[];
+}
+
+export interface PremarketReport {
+  generated_at: string;
+  markets: QuoteRow[];
+  crypto_funding: { coin: string; annualized: number | null; reading: string | null }[];
+  events_today: EconEventOut[];
+  earnings_overnight: { ticker: string; company: string; items: string[]; time: string | null; link: string | null }[];
+  earnings_note: string;
+  levels: LevelRow[];
+  watchlist: string[];
+}
+
+export interface SectorRow {
+  symbol: string;
+  name: string;
+  change_1d: number | null;
+  change_1w: number | null;
+  change_1m: number | null;
+  vs_spy_1d: number | null;
+  vs_spy_1m: number | null;
+  above_ema20: boolean | null;
+  above_ema50: boolean | null;
+  above_ema200: boolean | null;
+}
+
+export interface LedgerReport {
+  generated_at: string;
+  session_date: string | null;
+  benchmarks: SectorRow[];
+  sectors: SectorRow[];
+  rotation: string | null;
+  theses: ThesisOut[];
+  invalidated_today: string[];
+}
+
+export interface TriggerOut {
+  created_at: string;
+  ticker: string;
+  kind: string;
+  fact: string;
+  cause: string;
+  stop: string;
+}
+
+export interface TodayResponse {
+  watchlist: string[];
+  premarket: PremarketReport | null;
+  ledger: LedgerReport | null;
+  triggers: TriggerOut[];
+}

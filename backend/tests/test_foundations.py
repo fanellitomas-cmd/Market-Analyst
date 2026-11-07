@@ -216,6 +216,9 @@ async def test_system_status_and_notify(wa_client: httpx.AsyncClient, router: Ro
     assert body["worker_alive"] is False  # el proceso en segundo plano no corre en los tests
     jobs = {j["id"]: j for j in body["jobs"]}
     assert set(jobs) == {
+        "premarket",
+        "alertas_intradia",
+        "cierre",
         "salud_fuentes",
         "calendario_economico",
         "datos_publicados",

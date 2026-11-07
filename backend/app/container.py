@@ -18,6 +18,7 @@ from app.core.db import init_db, make_engine
 from app.notify.channels import CallMeBotWhatsApp
 from app.notify.service import Notifier
 from app.services.ar_macro import ArMacroService, SeriesPoints
+from app.services.cadence import CadenceService
 from app.services.earnings import EarningsService
 from app.services.econ_calendar import EconCalendarService
 from app.services.forensic import ForensicService
@@ -28,6 +29,7 @@ from app.services.options import OptionsService
 from app.services.screener import ScreenerService
 from app.services.sentinel import SentinelService
 from app.services.technical import TechnicalService
+from app.services.thesis import ThesisService
 from app.services.us_macro import UsMacroService
 from app.sources.argentina_markets import ArgentinaDatosClient, DolarApiClient, DollarQuote
 from app.sources.bcra import BcraClient, BcraVariable
@@ -70,6 +72,8 @@ class Services:
     screener: ScreenerService
     sentinel: SentinelService
     options: OptionsService
+    theses: ThesisService
+    cadence: CadenceService
     notifier: Notifier
     engine: AsyncEngine
     sessions: async_sessionmaker[AsyncSession]
@@ -121,6 +125,11 @@ async def build_services(
                 TTLCache[list[DollarQuote]](settings.cache_ttl_dollar_quotes_seconds),
                 TTLCache[SeriesPoints](settings.cache_ttl_ar_series_seconds),
             )
+            technical = TechnicalService(markets, earnings)
+            options = OptionsService(clients.cboe, sessions)
+            sentinel = SentinelService(clients.okx, clients.yahoo, markets, ar, sessions)
+            calendar = EconCalendarService(clients.forexfactory, clients.fred, sessions)
+            theses = ThesisService(sessions, technical, forensic, earnings)
             yield Services(
                 settings=settings,
                 clients=clients,
@@ -130,17 +139,30 @@ async def build_services(
                 ),
                 markets=markets,
                 us=us,
-                calendar=EconCalendarService(clients.forexfactory, clients.fred, sessions),
+                calendar=calendar,
                 liquidity=LiquidityService(
                     us,
                     markets,
                     TTLCache[tuple[Points, str | None]](settings.cache_ttl_prices_seconds),
                 ),
                 ar=ar,
-                sentinel=SentinelService(clients.okx, clients.yahoo, markets, ar, sessions),
-                options=OptionsService(clients.cboe, sessions),
+                sentinel=sentinel,
+                options=options,
+                theses=theses,
+                cadence=CadenceService(
+                    sessions,
+                    clients.yahoo,
+                    markets,
+                    technical,
+                    options,
+                    sentinel,
+                    calendar,
+                    earnings,
+                    clients.sec,
+                    theses,
+                ),
                 earnings=earnings,
-                technical=TechnicalService(markets, earnings),
+                technical=technical,
                 forensic=forensic,
                 screener=ScreenerService(forensic, sessions),
                 notifier=Notifier(

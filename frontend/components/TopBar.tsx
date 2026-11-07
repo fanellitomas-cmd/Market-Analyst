@@ -6,6 +6,8 @@ import { api } from "@/lib/api";
 
 const LINKS = [
   { href: "/", label: "Panorama" },
+  { href: "/hoy", label: "Hoy" },
+  { href: "/tesis", label: "Tesis" },
   { href: "/eeuu", label: "EE.UU." },
   { href: "/liquidez", label: "Liquidez" },
   { href: "/argentina", label: "Argentina" },

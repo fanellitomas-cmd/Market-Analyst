@@ -627,3 +627,41 @@ td.left {
     padding: 5px 10px;
   }
 }
+
+.plain-list {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 4px;
+  font-size: 0.92rem;
+}
+.kv-text dd {
+  text-align: left;
+}
+.kv-text {
+  grid-template-columns: auto 1fr;
+}
+.heat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 8px;
+}
+.heat-tile {
+  border-radius: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+}
+.heat-name {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.heat-value {
+  font-size: 1.3rem;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+.heat-sub {
+  font-size: 0.75rem;
+  color: var(--text-2);
+  font-variant-numeric: tabular-nums;
+}

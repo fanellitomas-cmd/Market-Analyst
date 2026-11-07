@@ -191,7 +191,68 @@ async def options_snapshot(services: Services) -> JobResult:
     )
 
 
+# ---------- Cadencia: pre-market, alertas intradía y cierre ----------
+
+
+async def premarket(services: Services) -> JobResult:
+    report, message = await services.cadence.premarket()
+    return JobResult(
+        detail=f"pre-market con {len(report.markets)} mercados y {len(report.levels)} activos",
+        notify=message,
+    )
+
+
+async def intraday_triggers(services: Services) -> JobResult:
+    from app.services.cadence import session_open, trigger_message
+
+    if not session_open(utcnow()):
+        return JobResult(detail="la bolsa de Nueva York está cerrada")
+    new = await services.cadence.triggers()
+    if not new:
+        return JobResult(detail="sin asimetrías")
+    return JobResult(
+        detail=f"{len(new)} alerta(s): " + ", ".join(f"{t.ticker} ({t.kind})" for t in new),
+        notify="\n\n".join(trigger_message(t) for t in new),
+    )
+
+
+async def close_ledger(services: Services) -> JobResult:
+    report, message = await services.cadence.ledger()
+    detail = f"cierre de {report.session_date}; tesis invalidadas: {len(report.invalidated_today)}"
+    return JobResult(detail=detail, notify=message)
+
+
 JOBS: list[JobSpec] = [
+    JobSpec(
+        id="premarket",
+        name="Pre-market",
+        description="Asia, Europa, futuros, cripto, datos del día, resultados publicados y matriz "
+        "de niveles de la lista de seguimiento.",
+        schedule="Días hábiles de NY, 07:30",
+        cron={"day_of_week": "mon-fri", "hour": 7, "minute": 30},
+        func=premarket,
+        trading_days_only=True,
+    ),
+    JobSpec(
+        id="alertas_intradia",
+        name="Alertas de asimetría",
+        description="Volumen > 2,5σ rompiendo niveles o 8-K relevantes en la lista de seguimiento. "
+        "Sólo avisa si pasa algo.",
+        schedule="Cada 15 min con NY abierta",
+        cron={"day_of_week": "mon-fri", "hour": "10-18", "minute": "*/15"},
+        func=intraday_triggers,
+        trading_days_only=True,
+    ),
+    JobSpec(
+        id="cierre",
+        name="Cierre de rueda",
+        description="Reevalúa las tesis (kill switch), arma el mapa de calor sectorial y manda el "
+        "resumen del día.",
+        schedule="Días hábiles de NY, 18:20",
+        cron={"day_of_week": "mon-fri", "hour": 18, "minute": 20},
+        func=close_ledger,
+        trading_days_only=True,
+    ),
     JobSpec(
         id="salud_fuentes",
         name="Chequeo de fuentes",

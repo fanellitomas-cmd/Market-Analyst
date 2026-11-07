@@ -9,6 +9,9 @@ segundo (https://www.sec.gov/os/accessing-edgar-data). Sin User-Agent configurad
 no hace pedidos.
 """
 
+import html
+import re
+import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from datetime import date, datetime
 from typing import Any
@@ -102,6 +105,20 @@ class SecClient:
             return response.json()
         except ValueError as exc:
             raise SourceError(SOURCE, "respuesta no es JSON") from exc
+
+    async def current_8k(self) -> list["CurrentFiling"]:
+        """Las ~100 presentaciones 8-K más recientes de todas las empresas (feed en vivo)."""
+        if not self.configured:
+            raise SourceError(SOURCE, "falta configurar SEC_USER_AGENT (nombre y email)")
+        try:
+            response = await self._client.get(
+                f"{self._www}{CURRENT_8K_PATH}", headers={"User-Agent": self._user_agent}
+            )
+        except httpx.HTTPError as exc:
+            raise SourceError(SOURCE, f"no se pudo conectar ({type(exc).__name__})") from exc
+        if response.status_code != 200:
+            raise SourceError(SOURCE, f"respondió HTTP {response.status_code}")
+        return parse_current_feed(response.text)
 
     async def ticker_map(self) -> dict[str, CompanyRef]:
         payload = await self._get(f"{self._www}/files/company_tickers.json")
@@ -205,6 +222,68 @@ def extract_facts(
                 value=float(val),
                 filed=filed,
                 form=form if isinstance(form, str) else "",
+            )
+        )
+    return out
+
+
+# ---------- Feed de presentaciones recientes ----------
+
+CURRENT_8K_PATH = (
+    "/cgi-bin/browse-edgar?action=getcurrent&type=8-K&company=&dateb=&owner=include"
+    "&start=0&count=100&output=atom"
+)
+_ATOM = "{http://www.w3.org/2005/Atom}"
+_ITEM_RE = re.compile(r"Item\s+(\d\.\d\d)")
+_CIK_RE = re.compile(r"\((\d{4,10})\)")
+_ACC_RE = re.compile(r"AccNo:\s*(?:</b>)?\s*([\d-]{18,25})")
+
+
+@dataclass(frozen=True)
+class CurrentFiling:
+    cik: int
+    company: str
+    form: str
+    items: tuple[str, ...]
+    accession: str
+    updated: datetime | None
+    link: str | None
+
+
+def parse_current_feed(xml_text: str) -> list[CurrentFiling]:
+    """Feed Atom de las últimas presentaciones de EDGAR (todas las empresas)."""
+    try:
+        root = ET.fromstring(xml_text)
+    except ET.ParseError as exc:
+        raise SourceError(SOURCE, "el feed de presentaciones no es XML válido") from exc
+    out: list[CurrentFiling] = []
+    for entry in root.iter(f"{_ATOM}entry"):
+        title = (entry.findtext(f"{_ATOM}title") or "").strip()
+        summary = html.unescape(entry.findtext(f"{_ATOM}summary") or "")
+        cik_m = _CIK_RE.search(title)
+        acc_m = _ACC_RE.search(summary)
+        if not cik_m or not acc_m:
+            continue
+        form, sep, _ = title.partition(" - ")
+        # Título: "8-K - ACME CORP (0000000009) (Filer)": el nombre va entre " - " y el CIK.
+        company = title[len(form) + len(sep) : cik_m.start()].strip() if sep else ""
+        updated_raw = entry.findtext(f"{_ATOM}updated")
+        updated = None
+        if updated_raw:
+            try:
+                updated = datetime.fromisoformat(updated_raw.strip())
+            except ValueError:
+                updated = None
+        link_el = entry.find(f"{_ATOM}link")
+        out.append(
+            CurrentFiling(
+                cik=int(cik_m.group(1)),
+                company=company,
+                form=form.strip(),
+                items=tuple(dict.fromkeys(_ITEM_RE.findall(summary))),
+                accession=acc_m.group(1),
+                updated=updated,
+                link=link_el.get("href") if link_el is not None else None,
             )
         )
     return out

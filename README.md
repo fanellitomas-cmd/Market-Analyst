@@ -6,6 +6,8 @@ activos contra el S&P 500 (beta, correlación, volatilidad, caídas). Todo con f
 
 | Sección | Qué muestra | Fuente |
 |---|---|---|
+| **Hoy** | La cadencia del agente: pre-market (Asia, Europa, futuros, dólar, petróleo, oro, cripto y su financiamiento, datos del día, resultados publicados y matriz de niveles con AVWAP, perfil de volumen, zero gamma y movimiento implícito), alertas de asimetría (Ticker / Hecho / Causa / Stop técnico) y cierre (mapa de calor sectorial, EMAs, rotación y tesis) | todas |
+| **Tesis** | Protocolo de la visión: hipótesis, validación fundamental (quick ratio > 1,2, margen operativo, Altman), confirmación técnica (soporte y AVWAP del último balance) y kill switch doble que el agente revisa al cierre | SEC + Yahoo |
 | **Panorama** | EE.UU. de un vistazo (Fed, 10 años, pendiente, inflación, desempleo, VIX) y último dato anual de PBI, crecimiento, PBI per cápita, inflación, desempleo, cuenta corriente y deuda, por país | Banco Mundial |
 | **EE.UU.** | Calendario económico de la semana (horario de Buenos Aires) y sorpresas de CPI, PPI, PCE, NFP, desempleo y ventas minoristas frente al pronóstico. Fed, bonos del Tesoro (3M a 30A), pendientes 10A−2A y 10A−3M, hipotecas, inflación (IPC, núcleo, PCE núcleo, esperada), desempleo, empleos creados, pedidos de desempleo, PBI, VIX, spread high yield, dólar y petróleo. Historia de cada serie y curva de rendimientos hoy / hace 1 mes / hace 1 año | FRED (Reserva Federal de St. Louis) |
 | **Liquidez** | Balances de la Fed, el BCE y el BoJ; liquidez neta de la Fed (activos − TGA − RRP); DXY e índice amplio del dólar; spreads high yield y grado de inversión; HYG/LQD; condiciones financieras (NFCI); tasa real a 10 años; cíclicos/defensivos. Cambio a 1 mes, 3 meses y 1 año | FRED + Yahoo Finance |
@@ -33,7 +35,14 @@ programadas en hora de Buenos Aires, conoce los feriados de la bolsa de Nueva Yo
 WhatsApp (CallMeBot, gratis). Cada corrida y cada aviso quedan registrados en SQLite y se ven en
 **Sistema**. Principio "sin ruido": una tarea sólo avisa cuando hay algo que decir.
 
-Tareas actuales:
+Tareas actuales (lista de seguimiento = tickers con tesis activas + lista de opciones):
+- **Pre-market** (días hábiles de NY, 07:30): arma el pre-market y lo manda por WhatsApp.
+- **Alertas de asimetría** (cada 15 minutos con Nueva York abierta): avisa sólo si el volumen del
+  día va más de 2,5σ arriba de lo normal a esa hora rompiendo el máximo o mínimo de ayer (o de 52
+  semanas), o si una empresa seguida presenta un 8-K relevante. Una vez por día y tipo.
+- **Cierre de rueda** (días hábiles de NY, 18:20): reevalúa las tesis (si se dispara un kill
+  switch, la tesis se invalida y te avisa: sin promediar a la baja), arma el mapa de calor
+  sectorial y manda el resumen.
 - **Chequeo de fuentes** (días hábiles de NY, 07:15): verifica que cada fuente responda y avisa
   sólo si alguna falla.
 - **Calendario económico** (todos los días, 06:30): guarda los datos de la semana con su
