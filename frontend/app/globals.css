@@ -522,3 +522,67 @@ th.left,
 td.left {
   text-align: left;
 }
+
+.tv-chart {
+  width: 100%;
+  height: 460px;
+}
+.chart-with-profile {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 140px;
+  gap: 12px;
+}
+.vprofile {
+  display: flex;
+  flex-direction: column;
+  height: 370px;
+  padding-top: 4px;
+}
+.vp-row {
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
+.vp-bar {
+  height: 80%;
+  background: var(--series-neutral);
+  opacity: 0.35;
+  border-radius: 0 3px 3px 0;
+}
+.vp-bar.vp-va {
+  background: var(--series-1);
+  opacity: 0.55;
+}
+.vp-bar.vp-poc {
+  opacity: 1;
+}
+.regime-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-weight: 650;
+  background: var(--surface-2);
+}
+.check-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 4px;
+  font-size: 0.9rem;
+}
+@media (max-width: 760px) {
+  .chart-with-profile {
+    grid-template-columns: 1fr;
+  }
+  .vprofile {
+    height: 160px;
+  }
+  .tv-chart {
+    height: 360px;
+  }
+}
+.vp-label {
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}

@@ -10,6 +10,7 @@ activos contra el S&P 500 (beta, correlación, volatilidad, caídas). Todo con f
 | **EE.UU.** | Calendario económico de la semana (horario de Buenos Aires) y sorpresas de CPI, PPI, PCE, NFP, desempleo y ventas minoristas frente al pronóstico. Fed, bonos del Tesoro (3M a 30A), pendientes 10A−2A y 10A−3M, hipotecas, inflación (IPC, núcleo, PCE núcleo, esperada), desempleo, empleos creados, pedidos de desempleo, PBI, VIX, spread high yield, dólar y petróleo. Historia de cada serie y curva de rendimientos hoy / hace 1 mes / hace 1 año | FRED (Reserva Federal de St. Louis) |
 | **Liquidez** | Balances de la Fed, el BCE y el BoJ; liquidez neta de la Fed (activos − TGA − RRP); DXY e índice amplio del dólar; spreads high yield y grado de inversión; HYG/LQD; condiciones financieras (NFCI); tasa real a 10 años; cíclicos/defensivos. Cambio a 1 mes, 3 meses y 1 año | FRED + Yahoo Finance |
 | **Argentina** | Dólar oficial, mayorista, MEP, CCL, blue, cripto y tarjeta con su brecha; evolución de oficial/MEP/CCL/blue; riesgo país; reservas, base monetaria, tasa de política, BADLAR, TAMAR, plazo fijo, inflación mensual/interanual/esperada, CER y UVA | BCRA (oficial), DolarApi y ArgentinaDatos (comunitarias) |
+| **Técnico** | Régimen del activo antes de cualquier oscilador (tendencia con EMA 20/50/200 y ADX > 25, o rango, con o sin compresión de Bollinger); AVWAP anclados en el último balance (8-K), máximo y mínimo de 52 semanas, inicio del año y una fecha a elección; perfil de volumen de 60 días (POC, VAH, VAL); volumen relativo y su desvío (σ). Gráfico de velas con TradingView Lightweight Charts | Yahoo Finance + SEC |
 | **Empresas** | Últimos 12 trimestres: ingresos, variación anual, márgenes bruto/operativo/neto, ganancia neta y por acción; reacción de la acción (y exceso sobre el SPY) a 1, 5 y 20 ruedas de cada publicación de resultados | SEC EDGAR + Yahoo Finance |
 | **Sistema** | Estado del agente 24/7: si está activo, sus tareas programadas (hora de Buenos Aires), la última corrida de cada una, los avisos enviados por WhatsApp y botones para probar | — |
 | **Macro global** | Series históricas por indicador, comparando hasta 8 países (EE.UU., Canadá, Argentina, Brasil, México, Chile, Zona Euro, Alemania, Francia, Italia, Reino Unido, Japón, China) | Banco Mundial |
@@ -52,9 +53,11 @@ backend/    API en Python (FastAPI) y agente (APScheduler)
   app/sources/    clientes de Banco Mundial, FRED, BCRA, DolarApi, ArgentinaDatos,
                   SEC EDGAR y Yahoo Finance
   app/services/   macro.py (países), us_macro.py (FRED), ar_macro.py (Argentina),
-                  earnings.py (SEC), quant.py (fórmulas), markets.py
+                  earnings.py (SEC), technical.py (régimen, AVWAP, perfil), liquidity.py,
+                  econ_calendar.py, quant.py (fórmulas), markets.py
   app/api/        endpoints /api/auth, /api/macro, /api/us, /api/ar, /api/markets,
-                  /api/earnings, /api/system
+                  /api/earnings, /api/system,
+                  /api/liquidity, /api/calendar, /api/technical
   tests/          tests con respuestas simuladas (no salen a la red)
 frontend/   sitio en Next.js (App Router) + Recharts
 ```
@@ -120,6 +123,10 @@ cd frontend && npm run typecheck && npm run build
   reacción del precio usa los 8-K con ítem 2.02 y la hora de aceptación de la SEC para saber si
   se publicó antes, durante o después de la rueda. No incluye la sorpresa frente al consenso de
   analistas: no hay una fuente gratuita y confiable de estimados.
+- **Técnico**: el AVWAP usa velas de 1 hora (Yahoo da 2 años) y el precio típico
+  (máx + mín + cierre) / 3, la aproximación estándar sin datos operación por operación. El perfil
+  de volumen reparte el volumen de cada vela de 30 minutos entre los precios que recorrió. El
+  order flow (absorción en el libro de órdenes) no se incluye: requiere datos pagos.
 - **ForexFactory**: feed público del calendario de la semana con el pronóstico de consenso. No
   trae el dato real: el agente guarda el pronóstico y el dato real sale de FRED, calculado desde
   la serie oficial (puede diferir en ±0,1 del redondeo publicado). El PBoC y los PMIs no se

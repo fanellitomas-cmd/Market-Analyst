@@ -23,6 +23,7 @@ from app.services.econ_calendar import EconCalendarService
 from app.services.liquidity import LiquidityService, Points
 from app.services.macro import MacroService
 from app.services.markets import MarketsService
+from app.services.technical import TechnicalService
 from app.services.us_macro import UsMacroService
 from app.sources.argentina_markets import ArgentinaDatosClient, DolarApiClient, DollarQuote
 from app.sources.bcra import BcraClient, BcraVariable
@@ -56,6 +57,7 @@ class Services:
     earnings: EarningsService
     liquidity: LiquidityService
     calendar: EconCalendarService
+    technical: TechnicalService
     notifier: Notifier
     engine: AsyncEngine
     sessions: async_sessionmaker[AsyncSession]
@@ -88,6 +90,13 @@ async def build_services(
             markets = MarketsService(
                 clients.yahoo, TTLCache[PriceSeries](settings.cache_ttl_prices_seconds)
             )
+            earnings = EarningsService(
+                clients.sec,
+                markets,
+                TTLCache[dict[str, CompanyRef]](24 * 3600),
+                TTLCache[dict[str, Any]](settings.cache_ttl_sec_facts_seconds, max_entries=64),
+                TTLCache[list[Filing]](settings.cache_ttl_sec_filings_seconds, max_entries=64),
+            )
             us = UsMacroService(clients.fred, TTLCache[FredSeries](settings.cache_ttl_fred_seconds))
             yield Services(
                 settings=settings,
@@ -112,13 +121,8 @@ async def build_services(
                     TTLCache[list[DollarQuote]](settings.cache_ttl_dollar_quotes_seconds),
                     TTLCache[SeriesPoints](settings.cache_ttl_ar_series_seconds),
                 ),
-                earnings=EarningsService(
-                    clients.sec,
-                    markets,
-                    TTLCache[dict[str, CompanyRef]](24 * 3600),
-                    TTLCache[dict[str, Any]](settings.cache_ttl_sec_facts_seconds, max_entries=64),
-                    TTLCache[list[Filing]](settings.cache_ttl_sec_filings_seconds, max_entries=64),
-                ),
+                earnings=earnings,
+                technical=TechnicalService(markets, earnings),
                 notifier=Notifier(
                     CallMeBotWhatsApp(
                         client,

@@ -361,3 +361,53 @@ export interface CalendarResponse {
   recent: EconEventOut[];
   last_refresh: string | null;
 }
+
+// ---------- Técnico ----------
+
+export type RegimeKind = "uptrend" | "downtrend" | "squeeze" | "range" | "unclear" | "insufficient";
+
+export interface TechnicalResponse {
+  symbol: string;
+  name: string | null;
+  currency: string | null;
+  as_of: string;
+  close: number;
+  regime: {
+    kind: RegimeKind;
+    label: string;
+    explanation: string;
+    ema20: number | null;
+    ema50: number | null;
+    ema200: number | null;
+    adx: number | null;
+    bb_width: number | null;
+    bb_width_percentile: number | null;
+    conditions: { name: string; ok: boolean; detail: string }[];
+  };
+  volume: { last: number | null; avg50: number | null; zscore: number | null; relative: number | null };
+  avwaps: {
+    key: string;
+    label: string;
+    anchor: string | null;
+    value: number | null;
+    distance: number | null;
+    status: "OK" | "NO_DISPONIBLE";
+    note: string | null;
+    series: { time: string; value: number }[];
+  }[];
+  profile: {
+    interval: string;
+    range: string;
+    bins: { low: number; high: number; volume: number }[];
+    poc: number;
+    vah: number;
+    val: number;
+    bars_used: number;
+    bars_skipped: number;
+  } | null;
+  profile_note: string | null;
+  candles: { time: string; open: number; high: number; low: number; close: number; volume: number | null }[];
+  emas: { time: string; ema20: number | null; ema50: number | null; ema200: number | null }[];
+  notes: string[];
+  sources: SourceInfo[];
+}

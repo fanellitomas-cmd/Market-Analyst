@@ -200,6 +200,19 @@ class EarningsService:
             )
         return ref
 
+    async def latest_release(self, ticker: str) -> datetime | None:
+        """Hora (UTC) en que la SEC aceptó la última publicación de resultados (8-K ítem 2.02)."""
+        ref = await self.resolve(ticker)
+        filings = await self._filings_cache.get_or_load(
+            str(ref.cik), lambda: self._sec.filings(ref.cik)
+        )
+        times = [
+            f.accepted_at
+            for f in filings
+            if f.form in ("8-K", "8-K/A") and "2.02" in f.items and f.accepted_at is not None
+        ]
+        return max(times) if times else None
+
     async def analyze(self, ticker: str) -> EarningsResponse:
         ref = await self.resolve(ticker)
         facts, filings = await asyncio.gather(

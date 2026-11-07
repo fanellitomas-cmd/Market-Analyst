@@ -11,6 +11,7 @@ const LINKS = [
   { href: "/argentina", label: "Argentina" },
   { href: "/macro", label: "Macro global" },
   { href: "/mercados", label: "Mercados" },
+  { href: "/tecnico", label: "Técnico" },
   { href: "/empresas", label: "Empresas" },
   { href: "/sistema", label: "Sistema" },
 ];
