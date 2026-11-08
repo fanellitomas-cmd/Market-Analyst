@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
+import { fmtClock, useAutoRefresh } from "@/lib/live";
 import { ErrorNotice, Skeleton } from "@/components/Common";
 import { api, ApiError } from "@/lib/api";
 import { fmtArDateTime, fmtDate, fmtFraction, fmtNumber, NO_DATA } from "@/lib/format";
@@ -223,7 +224,7 @@ export default function HoyPage() {
   const load = useCallback(() => {
     api<TodayResponse>("/api/cadence/today").then(setData).catch((e) => setError(errMsg(e)));
   }, []);
-  useEffect(load, [load]);
+  const updated = useAutoRefresh(load, 60_000);
 
   async function run(job: string) {
     setBusy(job);
@@ -246,7 +247,8 @@ export default function HoyPage() {
         <p className="muted" style={{ margin: 0 }}>
           La cadencia del agente en hora de Buenos Aires: pre-market a las 07:30, alertas sólo cuando
           pasa algo y cierre a las 18:20. Lista de seguimiento:{" "}
-          {data ? data.watchlist.join(", ") || "vacía" : "…"} (tesis activas + lista de opciones).
+          {data ? data.watchlist.join(", ") || "vacía" : "…"} (tesis activas + lista de opciones).{" "}
+          <span className="updated-at">Se actualiza cada minuto · {fmtClock(updated)}</span>
         </p>
       </div>
       {error && <ErrorNotice message={error} />}

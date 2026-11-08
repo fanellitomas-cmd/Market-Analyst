@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
+import { fmtClock, useAutoRefresh } from "@/lib/live";
 import { ErrorNotice, Skeleton } from "@/components/Common";
 import { LineChartCard } from "@/components/LineChartCard";
 import { api, ApiError } from "@/lib/api";
@@ -45,9 +46,17 @@ function signed(v: number | null, digits = 1) {
 function CryptoSection() {
   const [data, setData] = useState<CryptoResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
-  useEffect(() => {
-    api<CryptoResponse>("/api/sentinel/crypto").then(setData).catch((e) => setError(errMsg(e)));
-  }, []);
+  const load = useCallback(
+    () =>
+      api<CryptoResponse>("/api/sentinel/crypto")
+        .then((d) => {
+          setData(d);
+          setError(null);
+        })
+        .catch((e) => setError(errMsg(e))),
+    [],
+  );
+  const updated = useAutoRefresh(load, 30_000);
 
   const fundingRows = useMemo(() => {
     if (!data) return [];
@@ -66,7 +75,7 @@ function CryptoSection() {
     <section className="card">
       <div className="card-head">
         <h2>Derivados cripto</h2>
-        <span className="faint">futuros perpetuos en OKX · cripto opera 24/7, también fines de semana</span>
+        <span className="updated-at">perpetuos en OKX · cada 30 s · {fmtClock(updated)}</span>
       </div>
       <p className="muted" style={{ margin: 0 }}>
         La tasa de financiamiento la pagan los comprados a los vendidos (o al revés) cada 8 horas: muestra
@@ -96,7 +105,15 @@ function CryptoSection() {
                   </dd>
                   <dt>Cuentas largas / cortas</dt>
                   <dd>{a.long_short_ratio === null ? NO_DATA : fmtNumber(a.long_short_ratio, 2)}</dd>
-                  <dt>Liquidados 24 h (largos / cortos)</dt>
+                  <dt
+                    title={
+                      a.liq_capped
+                        ? "OKX devuelve sólo las últimas 100 liquidaciones: el total puede cubrir menos de 24 horas"
+                        : undefined
+                    }
+                  >
+                    Liquidados {a.liq_capped && a.liq_since ? `desde las ${new Date(a.liq_since).toLocaleTimeString("es-AR", { timeZone: "America/Argentina/Buenos_Aires", hour: "2-digit", minute: "2-digit" })}` : "24 h"} (largos / cortos)
+                  </dt>
                   <dd>
                     {fmtUsdCompact(a.liq_long_usd)} / {fmtUsdCompact(a.liq_short_usd)}
                   </dd>
@@ -139,16 +156,24 @@ function CryptoSection() {
 function CommoditiesSection() {
   const [data, setData] = useState<CommoditiesResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
-  useEffect(() => {
-    api<CommoditiesResponse>("/api/sentinel/commodities").then(setData).catch((e) => setError(errMsg(e)));
-  }, []);
+  const load = useCallback(
+    () =>
+      api<CommoditiesResponse>("/api/sentinel/commodities")
+        .then((d) => {
+          setData(d);
+          setError(null);
+        })
+        .catch((e) => setError(errMsg(e))),
+    [],
+  );
+  const updated = useAutoRefresh(load, 120_000);
   const labels = data?.rows.find((r) => r.changes.length)?.changes.map((c) => c.label) ?? [];
 
   return (
     <section className="card">
       <div className="card-head">
         <h2>Materias primas y monedas</h2>
-        <span className="faint">alertas tempranas de costos y de flujo global</span>
+        <span className="updated-at">cada 2 min · {fmtClock(updated)}</span>
       </div>
       {error && <ErrorNotice message={error} />}
       {!data && !error && <Skeleton height={300} />}
@@ -230,15 +255,23 @@ function ArbitrageSection() {
   const [text, setText] = useState("");
   const [message, setMessage] = useState<string | null>(null);
 
-  const load = useCallback(() => {
-    api<ArbitrageResponse>("/api/sentinel/arbitrage")
-      .then((d) => {
-        setData(d);
-        setText(d.cedear_ratios.map((c) => `${c.local} ${c.foreign} ${c.ratio}`).join("\n"));
-      })
-      .catch((e) => setError(errMsg(e)));
-  }, []);
-  useEffect(load, [load]);
+  const textLoaded = useRef(false);
+  const load = useCallback(
+    () =>
+      api<ArbitrageResponse>("/api/sentinel/arbitrage")
+        .then((d) => {
+          setData(d);
+          setError(null);
+          // El cuadro de CEDEARs se completa una sola vez: no pisar lo que el usuario edita.
+          if (!textLoaded.current) {
+            setText(d.cedear_ratios.map((c) => `${c.local} ${c.foreign} ${c.ratio}`).join("\n"));
+            textLoaded.current = true;
+          }
+        })
+        .catch((e) => setError(errMsg(e))),
+    [],
+  );
+  const updated = useAutoRefresh(load, 60_000);
 
   async function saveCedears() {
     setMessage(null);
@@ -250,7 +283,8 @@ function ArbitrageSection() {
     try {
       await api("/api/sentinel/cedears", { method: "PUT", body: JSON.stringify(items) });
       setMessage(`Guardados ${items.length} CEDEARs.`);
-      load();
+      textLoaded.current = false;
+      void load();
     } catch (e) {
       setMessage(errMsg(e));
     }
@@ -260,6 +294,7 @@ function ArbitrageSection() {
     <section className="card">
       <div className="card-head">
         <h2>Arbitraje ADR / CEDEAR / CCL</h2>
+        <span className="updated-at">cada 60 s · {fmtClock(updated)}</span>
         {data && (
           <span className="faint">
             CCL de mercado: <b>{data.ccl_market === null ? NO_DATA : `$ ${fmtNumber(data.ccl_market, 2)}`}</b> ·

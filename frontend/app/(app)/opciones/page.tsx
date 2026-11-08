@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { fmtClock, useAutoRefresh } from "@/lib/live";
 import {
   Bar,
   BarChart,
@@ -129,6 +130,9 @@ export default function OpcionesPage() {
       .catch(() => undefined);
     void load("SPY");
   }, [load]);
+
+  // CBOE publica con ~15 minutos de demora: refrescar cada 5 minutos alcanza.
+  const updated = useAutoRefresh(() => (data ? load(data.symbol) : undefined), 300_000);
 
   async function saveWatchlist() {
     setMessage(null);
@@ -331,7 +335,10 @@ export default function OpcionesPage() {
               )}
             </section>
           </div>
-          <SourceLine source={data.source} extra="datos con unos 15 minutos de demora" />
+          <SourceLine
+            source={data.source}
+            extra={`datos con unos 15 minutos de demora · se actualiza cada 5 min (${fmtClock(updated)})`}
+          />
         </>
       )}
 

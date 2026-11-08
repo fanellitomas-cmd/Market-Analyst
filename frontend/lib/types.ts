@@ -509,6 +509,7 @@ export interface CryptoAsset {
   liq_short_usd: number | null;
   liq_count: number;
   liq_since: string | null;
+  liq_capped: boolean;
   errors: string[];
 }
 

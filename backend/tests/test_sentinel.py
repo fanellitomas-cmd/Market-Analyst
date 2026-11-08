@@ -180,18 +180,24 @@ async def test_arbitrage_endpoint(auth_client: httpx.AsyncClient, router: Router
     router.add("/chart/GGAL?", quote(40.0, t, "USD"))
     router.add("/chart/GGAL.BA?", quote(6000.0, t, "ARS"))
     router.add("/chart/YPF?", quote(30.0, t, "USD"))
-    router.add("/chart/YPFD.BA?", quote(46500.0, t - timedelta(hours=5), "ARS"))  # desfasado
+    router.add("/chart/YPFD.BA?", quote(4650.0, t - timedelta(hours=5), "ARS"))  # desfasado
     router.add("/chart/BMA?", quote(80.0, t, "USD"))
     router.add("/chart/BMA.BA?", quote(12400.0, t, "ARS"))
     router.add("/chart/AAPL?", quote(250.0, t, "USD"))
     router.add("/chart/AAPL.BA?", quote(19000.0, t, "ARS"))
+    router.add("/chart/MSFT?", quote(500.0, t, "USD"))
+    router.add("/chart/MSFT.BA?", quote(20000.0, t, "ARS"))  # ratio real 30; cargado 300
     router.json(
         "dolarapi.test/v1/dolares",
         [{"casa": "contadoconliqui", "nombre": "CCL", "compra": 1490, "venta": 1500}],
     )
 
     r = await auth_client.put(
-        "/api/sentinel/cedears", json=[{"local": "aapl.ba", "foreign": "aapl", "ratio": 20}]
+        "/api/sentinel/cedears",
+        json=[
+            {"local": "aapl.ba", "foreign": "aapl", "ratio": 20},
+            {"local": "MSFT.BA", "foreign": "MSFT", "ratio": 300},
+        ],
     )
     assert r.status_code == 200, r.text
     bad = await auth_client.put(
@@ -213,4 +219,57 @@ async def test_arbitrage_endpoint(auth_client: httpx.AsyncClient, router: Router
     assert body["ccl_median_implied"] == pytest.approx(1525)
     aapl = rows["AAPL"]
     assert aapl["kind"] == "CEDEAR" and aapl["implied_fx"] == pytest.approx(19000 * 20 / 250)
+    msft = rows["MSFT"]
+    assert not msft["comparable"] and "probablemente es incorrecto" in msft["note"]
     assert rows["PAM"]["implied_fx"] is None and rows["PAM"]["note"].startswith("sin precio")
+
+
+# ---------- Cinta en vivo ----------
+
+
+def test_tnx_scale() -> None:
+    from app.services.live import tnx_to_pct
+
+    assert tnx_to_pct(4.25) == 4.25
+    assert tnx_to_pct(42.5) == pytest.approx(4.25)
+
+
+async def test_live_strip(auth_client: httpx.AsyncClient, router: Router) -> None:
+    t = datetime(2026, 11, 6, 19, 0, tzinfo=UTC)
+    router.add("GSPC?range", quote(6000.0, t, "USD"))
+    router.add("TNX?range", quote(4.3, t, "USD"))
+    router.json(
+        "dolarapi.test/v1/dolares",
+        [
+            {
+                "casa": "contadoconliqui",
+                "nombre": "CCL",
+                "compra": 1490,
+                "venta": 1500,
+                "fechaActualizacion": "2026-11-06T18:00:00Z",
+            },
+        ],
+    )
+    router.json(
+        "argdatos.test/v1/finanzas/indices/riesgo-pais",
+        [{"valor": 650, "fecha": "2026-11-05"}, {"valor": 640, "fecha": "2026-11-06"}],
+    )
+    r = await auth_client.get("/api/live/strip")
+    assert r.status_code == 200, r.text
+    items = {i["key"]: i for i in r.json()["items"]}
+    assert items["spx"]["value"] == 6000 and items["spx"]["change"] == 0
+    assert items["us10y"]["format"] == "pct" and items["us10y"]["change_kind"] == "pp"
+    assert items["ndx"]["value"] is None and items["ndx"]["error"]  # sin ruta: no se inventa
+    assert items["usd_contadoconliqui"]["value"] == 1500
+    assert items["riesgo_pais"]["value"] == 640
+    assert items["riesgo_pais"]["change"] == pytest.approx(640 / 650 - 1)
+
+
+async def test_live_strip_marks_stale_series(
+    auth_client: httpx.AsyncClient, router: Router
+) -> None:
+    old = datetime.now(UTC) - timedelta(days=20)
+    router.add("MERV?range", quote(2_800_000.0, old, "ARS"))
+    r = await auth_client.get("/api/live/strip")
+    merval = next(i for i in r.json()["items"] if i["key"] == "merval")
+    assert merval["stale"] is True

@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { fmtClock, useAutoRefresh } from "@/lib/live";
 import { ErrorNotice, Skeleton, SourceLine } from "@/components/Common";
 import { LineChartCard } from "@/components/LineChartCard";
 import { api, ApiError, qs } from "@/lib/api";
@@ -91,6 +92,12 @@ function ArTile({
             {sub}
           </>
         ) : null}
+        {item.note && item.status === "OK" && (
+          <>
+            <br />
+            <span className="neg">{item.note}</span>
+          </>
+        )}
       </div>
     </button>
   );
@@ -108,11 +115,17 @@ export default function ArgentinaPage() {
   const [series, setSeries] = useState<ArSeriesResponse | null>(null);
   const [seriesError, setSeriesError] = useState<string | null>(null);
 
-  useEffect(() => {
-    api<ArDashboardResponse>("/api/ar/dashboard")
-      .then(setDash)
-      .catch((e) => setDashError(errMsg(e)));
-  }, []);
+  const loadDash = useCallback(
+    () =>
+      api<ArDashboardResponse>("/api/ar/dashboard")
+        .then((d) => {
+          setDash(d);
+          setDashError(null);
+        })
+        .catch((e) => setDashError(errMsg(e))),
+    [],
+  );
+  const dashUpdated = useAutoRefresh(loadDash, 60_000);
 
   useEffect(() => {
     let cancelled = false;
@@ -191,7 +204,7 @@ export default function ArgentinaPage() {
       <section className="card">
         <div className="card-head">
           <h2>Dólar</h2>
-          <span className="faint">pesos por dólar</span>
+          <span className="updated-at">pesos por dólar · se actualiza solo · {fmtClock(dashUpdated)}</span>
         </div>
         {!dash && !dashError && <Skeleton height={220} />}
         {dash && dash.dollars.status !== "OK" && (

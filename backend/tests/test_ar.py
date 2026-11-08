@@ -7,53 +7,57 @@ from app.services.ar_macro import BCRA_BY_KEY, match_variable
 from app.sources.bcra import BcraClient, BcraVariable
 from tests.conftest import Router
 
+PV = "Principales Variables"
+NA = "En porcentaje nominal anual"
+EA = "En porcentaje efectivo anual"
 
-def var(vid: int, desc: str) -> BcraVariable:
-    return BcraVariable(vid, desc, None, None, date(2026, 11, 4), 1.0)
+
+def var(vid: int, desc: str, unit: str | None = None, cat: str | None = PV) -> BcraVariable:
+    return BcraVariable(vid, desc, cat, unit, date(2026, 11, 4), 1.0)
 
 
+def row(
+    vid: int, desc: str, unit: str, value: float, day: str = "2026-11-04", cat: str = PV
+) -> dict[str, object]:
+    return {
+        "idVariable": vid,
+        "descripcion": desc,
+        "categoria": cat,
+        "unidadExpresion": unit,
+        "ultFechaInformada": day,
+        "ultValorInformado": value,
+    }
+
+
+# Filas con el formato y las descripciones reales del catálogo v4.0 del BCRA.
 CATALOG_V4 = {
     "status": 200,
-    "metadata": {"resultset": {"count": 6, "offset": 0, "limit": 3000}},
+    "metadata": {"resultset": {"count": 9, "offset": 0, "limit": 3000}},
     "results": [
-        {
-            "idVariable": 1,
-            "descripcion": "Reservas Internacionales del BCRA (en millones de dólares)",
-            "categoria": "Principales Variables",
-            "unidadExpresion": "En millones de USD",
-            "ultFechaInformada": "2026-11-04",
-            "ultValorInformado": 41234.0,
-        },
-        {
-            "idVariable": 5,
-            "descripcion": "Tipo de Cambio Mayorista ($ por USD) Comunicación A 3500",
-            "ultFechaInformada": "2026-11-05",
-            "ultValorInformado": 1425.5,
-        },
-        {
-            "idVariable": 7,
-            "descripcion": "Tasa de interés BADLAR de bancos privados (en % n.a.)",
-            "ultFechaInformada": "2026-11-04",
-            "ultValorInformado": 31.4,
-        },
-        {
-            "idVariable": 35,
-            "descripcion": "Tasa de interés BADLAR de bancos privados (en % e.a.)",
-            "ultFechaInformada": "2026-11-04",
-            "ultValorInformado": 36.2,
-        },
-        {
-            "idVariable": 27,
-            "descripcion": "Inflación mensual (variación en %)",
-            "ultFechaInformada": "2026-09-30",
-            "ultValorInformado": 1.9,
-        },
-        {
-            "idVariable": 31,
-            "descripcion": "Unidad de Valor Adquisitivo (UVA) (en pesos, base 31.3.2016=14.05)",
-            "ultFechaInformada": "2026-11-06",
-            "ultValorInformado": 1650.12,
-        },
+        row(1, "Reservas internacionales", "En millones de USD", 41234.0),
+        row(
+            5,
+            "Tipo de cambio mayorista de referencia",
+            "Pesos argentinos por dólar estadounidense",
+            1425.5,
+            "2026-11-05",
+        ),
+        row(7, "Tasa de interés BADLAR de bancos privados", NA, 31.4),
+        row(35, "Tasa de interés BADLAR de bancos privados", EA, 36.2),
+        row(27, "Inflación mensual.", "En porcentaje", 1.9, "2026-09-30"),
+        row(
+            31, "Unidad de valor adquisitivo (base 31.3.16=14.05)", "En ARS", 1650.12, "2026-11-06"
+        ),
+        row(
+            87,
+            "Depósitos a plazo no ajustables por CER/UVAS de los sectores público y privado",
+            "En millones de ARS",
+            9.0,
+            cat="Depósitos por tipo de titular",
+        ),
+        row(
+            160, "Tasas de interés de política monetaria", NA, 29.0, "2025-07-10", cat="Series.xlsm"
+        ),
     ],
 }
 
@@ -96,25 +100,39 @@ DOLARES = [
 # ---------- Matching de variables ----------
 
 
-def test_match_prefers_nominal_rate_over_effective() -> None:
+def test_match_uses_unit_to_tell_nominal_from_effective() -> None:
+    # Misma descripción: sólo la unidad distingue la tasa nominal de la efectiva.
     variables = [
-        var(35, "Tasa de interés BADLAR de bancos privados (en % e.a.)"),
-        var(7, "Tasa de interés BADLAR de bancos privados (en % n.a.)"),
-        var(8, "Tasa de interés BADLAR de bancos públicos (en % n.a.)"),
+        var(35, "Tasa de interés BADLAR de bancos privados", EA),
+        var(7, "Tasa de interés BADLAR de bancos privados", NA),
     ]
     found = match_variable(BCRA_BY_KEY["badlar"], variables)
     assert found is not None and found.id == 7
 
 
+def test_match_prefers_principal_variables() -> None:
+    variables = [
+        var(
+            87,
+            "Depósitos ajustables por coeficiente de estabilizacion de referencia",
+            cat="Depósitos por tipo de titular",
+        ),
+        var(30, "Coeficiente de estabilización de referencia (base 2.2.02=1)"),
+    ]
+    found = match_variable(BCRA_BY_KEY["cer"], variables)
+    assert found is not None and found.id == 30
+
+
 def test_match_ignores_accents_and_case() -> None:
-    found = match_variable(BCRA_BY_KEY["inflacion_mensual"], [var(27, "INFLACIÓN MENSUAL (%)")])
+    found = match_variable(BCRA_BY_KEY["inflacion_mensual"], [var(27, "INFLACIÓN MENSUAL.")])
     assert found is not None and found.id == 27
 
 
-def test_match_cer_needs_whole_word() -> None:
-    # "concertación" contiene "cer" pero no es el CER.
+def test_match_cer_by_full_name() -> None:
     assert match_variable(BCRA_BY_KEY["cer"], [var(9, "Tasa de concertación")]) is None
-    found = match_variable(BCRA_BY_KEY["cer"], [var(30, "CER (base 2.2.2002=1)")])
+    found = match_variable(
+        BCRA_BY_KEY["cer"], [var(30, "Coeficiente de estabilización de referencia (base 2.2.02=1)")]
+    )
     assert found is not None
 
 
@@ -219,6 +237,9 @@ async def test_dashboard(auth_client: httpx.AsyncClient) -> None:
     assert bcra["uva"]["status"] == "OK"
     assert bcra["tamar"]["status"] == "NO_DISPONIBLE"
     assert bcra["tamar"]["value"] is None
+    assert bcra["cer"]["status"] == "NO_DISPONIBLE"  # no confunde CER con "depósitos ... CER"
+    assert bcra["tasa_politica"]["note"].startswith("dato desactualizado")
+    assert bcra["reservas"]["note"] is None
 
 
 async def test_dashboard_survives_all_sources_down(

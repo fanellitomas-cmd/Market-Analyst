@@ -23,6 +23,7 @@ from app.services.earnings import EarningsService
 from app.services.econ_calendar import EconCalendarService
 from app.services.forensic import ForensicService
 from app.services.liquidity import LiquidityService, Points
+from app.services.live import LiveService
 from app.services.macro import MacroService
 from app.services.markets import MarketsService
 from app.services.options import OptionsService
@@ -74,6 +75,7 @@ class Services:
     options: OptionsService
     theses: ThesisService
     cadence: CadenceService
+    live: LiveService
     notifier: Notifier
     engine: AsyncEngine
     sessions: async_sessionmaker[AsyncSession]
@@ -146,6 +148,7 @@ async def build_services(
                     TTLCache[tuple[Points, str | None]](settings.cache_ttl_prices_seconds),
                 ),
                 ar=ar,
+                live=LiveService(clients.yahoo, ar),
                 sentinel=sentinel,
                 options=options,
                 theses=theses,

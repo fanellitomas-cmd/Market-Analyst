@@ -55,6 +55,10 @@ class ForexFactoryClient:
             response = await self._client.get(self.url)
         except httpx.HTTPError as exc:
             raise SourceError(SOURCE, f"no se pudo conectar ({type(exc).__name__})") from exc
+        if response.status_code == 429:
+            raise SourceError(
+                SOURCE, "límite de pedidos del sitio (429): volvé a intentar en unos minutos"
+            )
         if response.status_code != 200:
             raise SourceError(SOURCE, f"respondió HTTP {response.status_code}")
         try:

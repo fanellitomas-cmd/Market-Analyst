@@ -135,7 +135,9 @@ class YahooClient:
 
     async def get_quote(self, symbol: str) -> Quote:
         """Último precio (con su hora) según los metadatos del gráfico. Puede estar demorado."""
-        result = await self._fetch_chart(symbol, {"range": "5d", "interval": "1d"})
+        # Con range=1d, chartPreviousClose es el cierre de la rueda anterior. Con rangos más largos
+        # es el cierre previo al comienzo del rango (por ejemplo, de hace 5 ruedas).
+        result = await self._fetch_chart(symbol, {"range": "1d", "interval": "1d"})
         raw_meta = result.get("meta")
         meta: dict[str, Any] = raw_meta if isinstance(raw_meta, dict) else {}
         price, ts = _num(meta.get("regularMarketPrice")), meta.get("regularMarketTime")

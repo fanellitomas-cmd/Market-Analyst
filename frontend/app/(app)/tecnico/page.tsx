@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { fmtClock, useAutoRefresh } from "@/lib/live";
 import { ErrorNotice, Skeleton, SourceLine } from "@/components/Common";
 import { AVWAP_COLORS, EMA_COLORS, TechnicalChart, VolumeProfile } from "@/components/TechnicalChart";
 import { api, ApiError, qs } from "@/lib/api";
@@ -42,6 +43,8 @@ export default function TecnicoPage() {
   useEffect(() => {
     void load("SPY", "");
   }, [load]);
+
+  const updated = useAutoRefresh(() => (data ? load(data.symbol, anchor) : undefined), 120_000);
 
   const r = data?.regime;
 
@@ -260,7 +263,7 @@ export default function TecnicoPage() {
           </div>
           <SourceLine
             source={data.sources[0]}
-            extra="velas ajustadas; AVWAP con velas de 1 hora y precio típico (máx + mín + cierre) / 3"
+            extra={`velas ajustadas; AVWAP con velas de 1 hora y precio típico (máx + mín + cierre) / 3 · se actualiza cada 2 min (${fmtClock(updated)})`}
           />
         </>
       )}

@@ -16,6 +16,7 @@ from app.api import (
     earnings,
     forensic,
     liquidity,
+    live,
     macro,
     markets,
     options,
@@ -84,6 +85,7 @@ def create_app(
     api.include_router(options.router)
     api.include_router(thesis.router)
     api.include_router(cadence.router)
+    api.include_router(live.router)
     app.include_router(api)
 
     @app.get("/health", include_in_schema=False)

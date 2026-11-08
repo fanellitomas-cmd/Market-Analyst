@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { useAutoRefresh } from "@/lib/live";
 import { ErrorNotice, Skeleton, SourceLine } from "@/components/Common";
 import { UsTile } from "@/components/UsTile";
 import { api, ApiError } from "@/lib/api";
@@ -19,13 +20,19 @@ export default function PanoramaPage() {
   const [ar, setAr] = useState<ArDashboardResponse | null>(null);
   const [arError, setArError] = useState<string | null>(null);
 
+  const refreshQuick = useCallback(async () => {
+    await Promise.all([
+      api<ArDashboardResponse>("/api/ar/dashboard")
+        .then(setAr)
+        .catch((e) => setArError(e instanceof ApiError ? e.message : "Error inesperado.")),
+      api<UsDashboardResponse>("/api/us/dashboard")
+        .then(setUs)
+        .catch((e) => setUsError(e instanceof ApiError ? e.message : "Error inesperado.")),
+    ]);
+  }, []);
+  useAutoRefresh(refreshQuick, 120_000);
+
   useEffect(() => {
-    api<ArDashboardResponse>("/api/ar/dashboard")
-      .then(setAr)
-      .catch((e) => setArError(e instanceof ApiError ? e.message : "Error inesperado."));
-    api<UsDashboardResponse>("/api/us/dashboard")
-      .then(setUs)
-      .catch((e) => setUsError(e instanceof ApiError ? e.message : "Error inesperado."));
     api<MacroSnapshotResponse>("/api/macro/snapshot")
       .then(setData)
       .catch((e) => setError(e instanceof ApiError ? e.message : "Error inesperado."));

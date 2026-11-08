@@ -37,6 +37,7 @@ T = TypeVar("T")
 
 COINS = ("BTC", "ETH", "SOL")
 FUNDINGS_PER_DAY = 3
+LIQ_LIMIT = 100
 
 
 @dataclass(frozen=True)
@@ -51,7 +52,9 @@ class AdrSpec:
 # programa cambia su ratio, se corrige acá (la página muestra el ratio usado).
 ADRS: list[AdrSpec] = [
     AdrSpec("GGAL", "GGAL.BA", 10, "Grupo Financiero Galicia"),
-    AdrSpec("YPF", "YPFD.BA", 1, "YPF"),
+    # Verificado contra precios reales (nov-2026): con 10 el CCL implícito coincide con el resto
+    # de los ADRs; con 1 daba $167, imposible.
+    AdrSpec("YPF", "YPFD.BA", 10, "YPF"),
     AdrSpec("PAM", "PAMP.BA", 25, "Pampa Energía"),
     AdrSpec("BMA", "BMA.BA", 10, "Banco Macro"),
     AdrSpec("BBAR", "BBAR.BA", 3, "BBVA Argentina"),
@@ -67,6 +70,7 @@ ADRS: list[AdrSpec] = [
 CEDEAR_KEY = "cedear_ratios"
 # Dos precios tomados con más de 2 horas de diferencia no se pueden comparar.
 MAX_QUOTE_GAP = timedelta(hours=2)
+RATIO_SANITY = 0.30
 
 COMMODITIES: list[tuple[str, str, str]] = [
     ("CL=F", "Petróleo WTI", "Energía"),
@@ -117,6 +121,7 @@ class CryptoAsset(StrictModel):
     liq_short_usd: float | None
     liq_count: int
     liq_since: datetime | None
+    liq_capped: bool  # OKX devuelve como máximo 100 órdenes: puede cubrir menos de 24 h
     errors: list[str]
 
 
@@ -234,8 +239,9 @@ class SentinelService:
         self._markets = markets
         self._ar = ar
         self._sessions = sessions
-        self._crypto_cache: TTLCache[CryptoResponse] = TTLCache(120)
-        self._quote_cache: TTLCache[Quote] = TTLCache(120, max_entries=256)
+        # Cortas: la página se refresca sola cada 30-60 s.
+        self._crypto_cache: TTLCache[CryptoResponse] = TTLCache(30)
+        self._quote_cache: TTLCache[Quote] = TTLCache(30, max_entries=256)
 
     # --- Cripto ---
 
@@ -296,6 +302,7 @@ class SentinelService:
         liq_long = liq_short = None
         liq_count = 0
         liq_since = None
+        liq_capped = False
         if liqs is not None and ct is not None:
             day_ago = datetime.now(UTC) - timedelta(hours=24)
             window = [x for x in liqs if x.time >= day_ago]
@@ -303,6 +310,7 @@ class SentinelService:
             liq_long = math.fsum(x.contracts * ct * x.price for x in window if x.side == "long")
             liq_short = math.fsum(x.contracts * ct * x.price for x in window if x.side == "short")
             liq_since = min((x.time for x in window), default=None)
+            liq_capped = len(liqs) >= LIQ_LIMIT
 
         return CryptoAsset(
             coin=coin,
@@ -329,6 +337,7 @@ class SentinelService:
             liq_short_usd=liq_short,
             liq_count=liq_count,
             liq_since=liq_since,
+            liq_capped=liq_capped,
             errors=errors,
         )
 
@@ -486,6 +495,15 @@ class SentinelService:
                 continue
             r.vs_ccl = r.implied_fx / ccl - 1.0 if ccl else None
             r.vs_median = r.implied_fx / median - 1.0 if median else None
+            # Un desvío enorme no es un arbitraje: casi siempre es un ratio mal cargado o que
+            # cambió. Se marca y se saca de la comparación.
+            if r.vs_median is not None and abs(r.vs_median) > RATIO_SANITY:
+                r.comparable = False
+                warning = (
+                    f"CCL implícito {r.vs_median * 100:+.0f} % contra la mediana: el ratio de "
+                    f"{r.ratio:g} probablemente es incorrecto o cambió"
+                )
+                r.note = f"{r.note}; {warning}" if r.note else warning
         return ArbitrageResponse(
             rows=rows,
             ccl_market=ccl,

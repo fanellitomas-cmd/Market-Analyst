@@ -665,3 +665,49 @@ td.left {
   color: var(--text-2);
   font-variant-numeric: tabular-nums;
 }
+
+/* ---------- Cinta en vivo ---------- */
+.live-strip {
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border);
+  font-size: 0.82rem;
+}
+.live-strip-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 6px 16px;
+  display: flex;
+  gap: 18px;
+  overflow-x: auto;
+  white-space: nowrap;
+  scrollbar-width: none;
+}
+.live-strip-inner::-webkit-scrollbar {
+  display: none;
+}
+.live-dot {
+  color: var(--good);
+  font-variant-numeric: tabular-nums;
+}
+.live-dot.off {
+  color: var(--bad);
+}
+.live-label {
+  color: var(--text-2);
+}
+.live-stale {
+  opacity: 0.55;
+}
+.updated-at {
+  font-size: 0.8rem;
+  color: var(--text-3);
+  font-variant-numeric: tabular-nums;
+}
+.sticky-head {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.sticky-head .topbar {
+  position: static;
+}

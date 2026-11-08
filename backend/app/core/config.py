@@ -62,7 +62,8 @@ class Settings(BaseSettings):
     # FRED actualiza una vez por día hábil (las tasas, a la tarde de EE.UU.).
     cache_ttl_fred_seconds: int = 3 * 3600
     cache_ttl_bcra_seconds: int = 3600
-    cache_ttl_dollar_quotes_seconds: int = 5 * 60
+    # El dólar se muestra en la cinta en vivo: la caché es corta.
+    cache_ttl_dollar_quotes_seconds: int = 60
     cache_ttl_ar_series_seconds: int = 3 * 3600
     cache_ttl_sec_facts_seconds: int = 6 * 3600
     cache_ttl_sec_filings_seconds: int = 3600

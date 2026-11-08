@@ -40,7 +40,12 @@ class BcraSpec:
     description: str
     include: tuple[str, ...]
     exclude: tuple[str, ...] = ()
+    # Patrones sobre la unidad: el BCRA publica la BADLAR nominal y la efectiva con la MISMA
+    # descripción, y sólo las distingue la unidad ("nominal anual" / "efectivo anual").
+    unit_include: tuple[str, ...] = ()
 
+
+NOMINAL = (r"nominal",)
 
 BCRA_SPECS: list[BcraSpec] = [
     BcraSpec(
@@ -48,7 +53,7 @@ BCRA_SPECS: list[BcraSpec] = [
         "Reservas internacionales",
         "BCRA",
         "musd",
-        "Reservas brutas del BCRA, en millones de dólares.",
+        "Reservas brutas del BCRA.",
         (r"reservas internacionales",),
         (r"variaci",),
     ),
@@ -58,17 +63,66 @@ BCRA_SPECS: list[BcraSpec] = [
         "BCRA",
         "mars",
         "Billetes y monedas en circulación más depósitos de los bancos en el BCRA.",
-        (r"base monetaria",),
+        (r"^base monetaria",),
         (r"variaci", r"promedio"),
+    ),
+    BcraSpec(
+        "m2_privado",
+        "M2 privado (var. interanual)",
+        "BCRA",
+        "pct",
+        "Variación interanual del promedio móvil de 30 días del M2 privado.",
+        (r"m2 privado",),
+    ),
+    BcraSpec(
+        "prestamos_privados",
+        "Préstamos al sector privado",
+        "BCRA",
+        "mars",
+        "Stock de préstamos de los bancos al sector privado.",
+        (r"^prestamos de las entidades financieras al sector privado",),
+    ),
+    BcraSpec(
+        "tc_mayorista",
+        "Dólar mayorista (BCRA)",
+        "Tipo de cambio",
+        "fx",
+        "Tipo de cambio mayorista de referencia (Comunicación A 3500), pesos por dólar.",
+        (r"tipo de cambio mayorista",),
+    ),
+    BcraSpec(
+        "tc_minorista",
+        "Dólar minorista (BCRA)",
+        "Tipo de cambio",
+        "fx",
+        "Tipo de cambio minorista, promedio vendedor.",
+        (r"tipo de cambio minorista",),
+    ),
+    BcraSpec(
+        "banda_inferior",
+        "Banda cambiaria: piso",
+        "Tipo de cambio",
+        "fx",
+        "Límite inferior del régimen de bandas cambiarias.",
+        (r"bandas cambiarias", r"inferior"),
+    ),
+    BcraSpec(
+        "banda_superior",
+        "Banda cambiaria: techo",
+        "Tipo de cambio",
+        "fx",
+        "Límite superior del régimen de bandas cambiarias.",
+        (r"bandas cambiarias", r"superior"),
     ),
     BcraSpec(
         "tasa_politica",
         "Tasa de política monetaria",
         "Tasas",
         "pct",
-        "Tasa de referencia del BCRA (nominal anual).",
+        "Tasa de referencia del BCRA (nominal anual). Fijate la fecha: el BCRA puede "
+        "dejar de publicarla.",
         (r"politica monetaria",),
-        (_NOT_EFFECTIVE,),
+        unit_include=NOMINAL,
     ),
     BcraSpec(
         "badlar",
@@ -77,7 +131,7 @@ BCRA_SPECS: list[BcraSpec] = [
         "pct",
         "Tasa por depósitos a plazo fijo de más de $1 millón a 30-35 días (nominal anual).",
         (r"badlar", r"privad"),
-        (_NOT_EFFECTIVE,),
+        unit_include=NOMINAL,
     ),
     BcraSpec(
         "tamar",
@@ -86,16 +140,16 @@ BCRA_SPECS: list[BcraSpec] = [
         "pct",
         "Tasa mayorista de depósitos a plazo fijo de más de $1.000 millones (nominal anual).",
         (r"tamar", r"privad"),
-        (_NOT_EFFECTIVE,),
+        unit_include=NOMINAL,
     ),
     BcraSpec(
         "plazo_fijo",
-        "Plazo fijo (minorista)",
+        "Plazo fijo a 30 días",
         "Tasas",
         "pct",
-        "Tasa promedio por depósitos a plazo fijo de personas (nominal anual).",
-        (r"plazo fijo",),
-        (_NOT_EFFECTIVE, r"millones", r"monto"),
+        "Tasa de depósitos a 30 días en entidades financieras (nominal anual).",
+        (r"depositos a 30 dias de plazo",),
+        unit_include=NOMINAL,
     ),
     BcraSpec(
         "inflacion_mensual",
@@ -103,7 +157,7 @@ BCRA_SPECS: list[BcraSpec] = [
         "Inflación",
         "pct",
         "Variación mensual del IPC (INDEC), publicada por el BCRA.",
-        (r"inflacion mensual",),
+        (r"^inflacion mensual",),
     ),
     BcraSpec(
         "inflacion_interanual",
@@ -111,15 +165,16 @@ BCRA_SPECS: list[BcraSpec] = [
         "Inflación",
         "pct",
         "Variación del IPC contra el mismo mes del año anterior.",
-        (r"inflacion interanual",),
+        (r"^inflacion interanual",),
     ),
     BcraSpec(
         "inflacion_esperada",
         "Inflación esperada (REM)",
         "Inflación",
         "pct",
-        "Inflación esperada para los próximos 12 meses según el relevamiento de analistas.",
-        (r"inflacion esperada",),
+        "Mediana de la inflación esperada para los próximos 12 meses según el "
+        "relevamiento de expectativas de mercado (REM).",
+        (r"expectativas de mercado", r"proximos 12 meses"),
     ),
     BcraSpec(
         "cer",
@@ -127,8 +182,7 @@ BCRA_SPECS: list[BcraSpec] = [
         "Índices de ajuste",
         "index",
         "Coeficiente de Estabilización de Referencia: ajusta bonos por inflación.",
-        (r"\bcer\b",),
-        (r"variaci",),
+        (r"^coeficiente de estabilizacion de referencia",),
     ),
     BcraSpec(
         "uva",
@@ -136,16 +190,7 @@ BCRA_SPECS: list[BcraSpec] = [
         "Índices de ajuste",
         "index",
         "Unidad de Valor Adquisitivo: ajusta créditos hipotecarios y plazos fijos UVA.",
-        (r"\buva\b",),
-        (r"\buvi\b", r"variaci"),
-    ),
-    BcraSpec(
-        "tc_mayorista",
-        "Dólar mayorista (BCRA)",
-        "BCRA",
-        "fx",
-        "Tipo de cambio mayorista de referencia (Comunicación A 3500), pesos por dólar.",
-        (r"tipo de cambio mayorista",),
+        (r"^unidad de valor adquisitivo",),
     ),
 ]
 BCRA_BY_KEY = {s.key: s for s in BCRA_SPECS}
@@ -169,15 +214,29 @@ def normalize(text: str) -> str:
     return "".join(c for c in nfkd if not unicodedata.combining(c))
 
 
+PRINCIPAL_CATEGORY = "principales variables"
+# Las series mensuales se publican con ~40 días de rezago; más de 60 días sin dato es raro.
+STALE_DAYS = 60
+
+
 def match_variable(spec: BcraSpec, variables: list[BcraVariable]) -> BcraVariable | None:
-    """La variable de menor id cuya descripción cumple el patrón (orden estable)."""
+    """La variable cuya descripción (y unidad) cumple el patrón. Ante varias, gana la de la
+    categoría "Principales Variables" y después la de menor id (orden estable). El catálogo tiene
+    más de mil series (depósitos y préstamos por tipo de titular, etc.), así que la categoría
+    evita confundir, por ejemplo, el CER con "depósitos ajustables por CER"."""
     candidates = [
         v
         for v in variables
         if all(re.search(p, normalize(v.description)) for p in spec.include)
         and not any(re.search(p, normalize(v.description)) for p in spec.exclude)
+        and all(re.search(p, normalize(v.unit or "")) for p in spec.unit_include)
     ]
-    return min(candidates, key=lambda v: v.id) if candidates else None
+    if not candidates:
+        return None
+    return min(
+        candidates,
+        key=lambda v: (normalize(v.category or "") != PRINCIPAL_CATEGORY, v.id),
+    )
 
 
 # ---------- Modelos de respuesta ----------
@@ -311,6 +370,9 @@ class ArMacroService:
 
     async def _quotes(self) -> list[DollarQuote]:
         return await self._quotes_cache.get_or_load("quotes", self._dolarapi.get_quotes)
+
+    async def country_risk_points(self) -> SeriesPoints:
+        return await self._country_risk()
 
     async def _country_risk(self) -> SeriesPoints:
         return await self._series_cache.get_or_load(
@@ -446,6 +508,11 @@ class ArMacroService:
                 )
                 continue
             ok = var.last_value is not None and var.last_date is not None
+            note = None
+            if var.last_date is not None:
+                age = (datetime.now(UTC).date() - var.last_date).days
+                if age > STALE_DAYS:
+                    note = f"dato desactualizado: el BCRA no lo publica desde hace {age} días"
             out.append(
                 ArLatest(
                     indicator=info,
@@ -454,6 +521,7 @@ class ArMacroService:
                     date=var.last_date,
                     source_description=f"{var.description} (id {var.id})",
                     source_unit=var.unit,
+                    note=note,
                 )
             )
         return out

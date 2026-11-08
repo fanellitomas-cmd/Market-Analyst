@@ -21,6 +21,23 @@ activos contra el S&P 500 (beta, correlación, volatilidad, caídas). Todo con f
 | **Macro global** | Series históricas por indicador, comparando hasta 8 países (EE.UU., Canadá, Argentina, Brasil, México, Chile, Zona Euro, Alemania, Francia, Italia, Reino Unido, Japón, China) | Banco Mundial |
 | **Mercados** | Beta, correlación, R², rendimiento, volatilidad anualizada y caída máxima contra un benchmark (SPY, QQQ, IWM, EEM, ACWI); correlación y beta móviles; comparación de hasta 15 activos | Yahoo Finance |
 
+## Tiempo real
+
+Debajo del menú hay una **cinta en vivo** (S&P 500, Nasdaq, VIX, DXY, Tesoro 10 años, oro,
+petróleo, bitcoin, Merval, dólares CCL, blue y oficial, riesgo país) que se actualiza cada 30
+segundos. Las páginas se recargan solas según cómo se actualiza su fuente, y se pausan cuando la
+pestaña no está visible:
+
+| Página | Cada | Frecuencia real de la fuente |
+|---|---|---|
+| Cinta, Centinela (cripto) | 30 s | Yahoo y OKX: casi en tiempo real |
+| Hoy, Argentina, Centinela (arbitraje) | 60 s | DolarApi: minutos; BYMA en Yahoo: ~20 min de demora |
+| Panorama, Técnico, materias primas | 2 min | Yahoo; FRED y BCRA publican una vez por día |
+| Opciones | 5 min | CBOE: ~15 min de demora |
+
+Cada dato muestra la hora de la fuente; si una serie deja de actualizarse (por ejemplo, el Merval en
+Yahoo) se marca como "viejo" en lugar de mostrarse como actual.
+
 ## Principio: cero dato inventado
 
 Heredado del proyecto Financiero. Si la fuente no trae un dato, se muestra "—" con su motivo;
@@ -144,6 +161,9 @@ cd frontend && npm run typecheck && npm run build
   efectiva no se puede calcular, la prima de riesgo) se muestran al lado del resultado. El P/E
   histórico corrige la cantidad de acciones por splits y en cada fecha usa sólo los balances ya
   presentados.
+- **BCRA**: las variables se buscan en la categoría "Principales Variables" y por unidad (la
+  BADLAR nominal y la efectiva comparten descripción). Si una serie lleva más de 60 días sin
+  publicarse (como la tasa de política monetaria) se avisa "dato desactualizado".
 - **Centinela**: OKX es un solo exchange (no el total del mercado); el mapa de liquidaciones de
   todo el mercado es pago. Los ratios de los ADRs están en `app/services/sentinel.py` y se ven en la
   página; los de CEDEARs los cargás vos porque cambian. Sólo se comparan precios local y exterior
