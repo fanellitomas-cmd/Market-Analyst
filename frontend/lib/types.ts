@@ -444,6 +444,7 @@ export interface ForensicResponse {
   sic: number | null;
   sic_description: string | null;
   altman_variant: "original" | "Z''";
+  financial_note: string | null;
   years: YearScores[];
   pe: {
     current: number | null;
@@ -463,6 +464,7 @@ export interface ForensicResponse {
     inputs: Record<string, number | null>;
     assumptions: string[];
     missing: string[];
+    note?: string | null;
   };
   sources: SourceInfo[];
 }

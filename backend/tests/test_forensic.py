@@ -121,6 +121,16 @@ def test_roic_and_wacc() -> None:
     assert no_beta.value is None and no_beta.missing == ["beta contra el S&P 500"]
 
 
+def test_wacc_without_debt_is_missing_not_zero() -> None:
+    w = wacc(year(debt=None), 2000, 1.2, 4.0, 5.0)
+    assert w.value is None and w.missing == ["deuda financiera"]
+
+
+def test_wacc_not_applicable_to_banks() -> None:
+    w = wacc(year(), 2000, 1.2, 4.0, 5.0, financial=True)
+    assert w.value is None and w.note == "no aplica a bancos y financieras"
+
+
 def test_roic_needs_positive_pretax() -> None:
     assert roic(year(pretax=-5)) is None
 
@@ -321,3 +331,52 @@ async def test_forensic_endpoint(auth_client: httpx.AsyncClient, router: Router)
 def test_company_filings_dataclass() -> None:
     cf = CompanyFilings(filings=[], sic=None, sic_description=None)
     assert cf.sic is None
+
+
+def _instant_facts(**concepts: float) -> dict[str, Any]:
+    g: dict[str, Any] = {
+        "Revenues": {"units": {"USD": [fact("2025-01-01", "2025-12-31", 1000)]}},
+    }
+    for name, val in concepts.items():
+        g[name] = {"units": {"USD": [fact(None, "2025-12-31", val)]}}
+    return {"facts": {"us-gaap": g}}
+
+
+def test_debt_prefers_total_and_adds_short_borrowings() -> None:
+    [y] = build_years(
+        _instant_facts(
+            LongTermDebt=100, LongTermDebtNoncurrent=80, LongTermDebtCurrent=20, CommercialPaper=5
+        )
+    )
+    assert y.get("debt") == 105  # el total ya incluye la porción corriente
+
+
+def test_debt_from_finance_lease_concepts() -> None:
+    [y] = build_years(
+        _instant_facts(
+            LongTermDebtAndCapitalLeaseObligations=40,
+            LongTermDebtAndCapitalLeaseObligationsCurrent=2,
+        )
+    )
+    assert y.get("debt") == 42
+
+
+def test_debt_none_when_nothing_reported() -> None:
+    [y] = build_years(_instant_facts())
+    assert y.get("debt") is None
+
+
+def test_sga_and_interest_fallbacks() -> None:
+    facts = _instant_facts()
+    g = facts["facts"]["us-gaap"]
+    for name, val in {
+        "SellingAndMarketingExpense": 30,
+        "GeneralAndAdministrativeExpense": 10,
+        "InterestPaidNet": 4,
+        "PaymentsToAcquireProductiveAssets": 7,
+    }.items():
+        g[name] = {"units": {"USD": [fact("2025-01-01", "2025-12-31", val)]}}
+    [y] = build_years(facts)
+    assert y.get("sga") == 40 and y.get("interest") == 4 and y.get("capex") == 7
+    assert any("comerciales + administrativos" in n for n in y.notes)
+    assert any("pagados en efectivo" in n for n in y.notes)

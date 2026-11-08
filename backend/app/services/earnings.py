@@ -45,6 +45,7 @@ REVENUE = (
     "Revenues",
     "RevenueFromContractWithCustomerIncludingAssessedTax",
     "SalesRevenueNet",
+    "RevenuesNetOfInterestExpense",
 )
 GROSS_PROFIT = ("GrossProfit",)
 OPERATING_INCOME = ("OperatingIncomeLoss",)

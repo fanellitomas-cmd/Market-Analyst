@@ -35,6 +35,8 @@ FLOWS: dict[str, tuple[str, ...]] = {
     "revenue": REVENUE,
     "cogs": ("CostOfRevenue", "CostOfGoodsAndServicesSold", "CostOfGoodsSold"),
     "sga": ("SellingGeneralAndAdministrativeExpense",),
+    "selling": ("SellingAndMarketingExpense",),
+    "g_and_a": ("GeneralAndAdministrativeExpense",),
     "depreciation": (
         "DepreciationDepletionAndAmortization",
         "DepreciationAndAmortization",
@@ -43,7 +45,7 @@ FLOWS: dict[str, tuple[str, ...]] = {
     "net_income": ("NetIncomeLoss",),
     "ebit": ("OperatingIncomeLoss",),
     "cfo": ("NetCashProvidedByUsedInOperatingActivities",),
-    "capex": ("PaymentsToAcquirePropertyPlantAndEquipment",),
+    "capex": ("PaymentsToAcquirePropertyPlantAndEquipment", "PaymentsToAcquireProductiveAssets"),
     "sbc": ("ShareBasedCompensation", "AllocatedShareBasedCompensationExpense"),
     "tax": ("IncomeTaxExpenseBenefit",),
     "pretax": (
@@ -51,6 +53,7 @@ FLOWS: dict[str, tuple[str, ...]] = {
         "IncomeLossFromContinuingOperationsBeforeIncomeTaxesMinorityInterestAndIncomeLossFromEquityMethodInvestments",
     ),
     "interest": ("InterestExpense", "InterestExpenseNonoperating", "InterestExpenseDebt"),
+    "interest_paid": ("InterestPaidNet", "InterestPaid"),
 }
 STOCKS: dict[str, tuple[str, ...]] = {
     "receivables": ("AccountsReceivableNetCurrent",),
@@ -63,8 +66,17 @@ STOCKS: dict[str, tuple[str, ...]] = {
         "StockholdersEquity",
         "StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest",
     ),
-    "lt_debt_noncurrent": ("LongTermDebtNoncurrent",),
-    "lt_debt_current": ("LongTermDebtCurrent", "DebtCurrent"),
+    "lt_debt_total": (
+        "LongTermDebt",
+        "LongTermDebtAndCapitalLeaseObligationsIncludingCurrentMaturities",
+    ),
+    "lt_debt_noncurrent": ("LongTermDebtNoncurrent", "LongTermDebtAndCapitalLeaseObligations"),
+    "lt_debt_current": (
+        "LongTermDebtCurrent",
+        "LongTermDebtAndCapitalLeaseObligationsCurrent",
+        "DebtCurrent",
+    ),
+    "short_borrowings": ("ShortTermBorrowings", "CommercialPaper"),
     "retained_earnings": ("RetainedEarningsAccumulatedDeficit",),
     "inventory": ("InventoryNet",),
     "cash": ("CashAndCashEquivalentsAtCarryingValue",),
@@ -89,6 +101,11 @@ LABELS = {
     "total_assets": "activo total",
     "total_liabilities": "pasivo total",
     "equity": "patrimonio",
+    "selling": "gastos comerciales",
+    "g_and_a": "gastos administrativos",
+    "interest_paid": "intereses pagados en efectivo",
+    "lt_debt_total": "deuda de largo plazo total",
+    "short_borrowings": "préstamos de corto plazo",
     "lt_debt_noncurrent": "deuda de largo plazo",
     "lt_debt_current": "deuda de corto plazo",
     "retained_earnings": "resultados acumulados",
@@ -145,16 +162,37 @@ def build_years(facts: dict[str, Any]) -> list[Year]:
         ):
             v["total_liabilities"] = v["total_assets"] - v["equity"]
             y.notes.append("pasivo total calculado como activo − patrimonio")
-        nc, cur = v["lt_debt_noncurrent"], v["lt_debt_current"]
-        if nc is None and cur is None:
-            v["debt"] = None
-        else:
-            if nc is None or cur is None:
-                which = "deuda de largo plazo" if nc is None else "deuda de corto plazo"
-                y.notes.append(f"se tomó 0 de {which} porque la empresa no la reporta")
-            v["debt"] = (nc or 0.0) + (cur or 0.0)
+        if v["sga"] is None and v["selling"] is not None and v["g_and_a"] is not None:
+            v["sga"] = v["selling"] + v["g_and_a"]
+            y.notes.append("gastos de comercialización y adm. = comerciales + administrativos")
+        if v["interest"] is None and v["interest_paid"] is not None:
+            v["interest"] = v["interest_paid"]
+            y.notes.append("intereses: se usaron los pagados en efectivo (no hay gasto devengado)")
+        v["debt"] = _total_debt(v, y.notes)
         years.append(y)
     return years
+
+
+def _total_debt(v: dict[str, float | None], notes: list[str]) -> float | None:
+    """Deuda financiera: el total de largo plazo (incluye la porción corriente) si se reporta;
+    si no, largo + corto plazo. Se suman préstamos de corto plazo / papeles comerciales."""
+    total, nc, cur, short = (
+        v["lt_debt_total"],
+        v["lt_debt_noncurrent"],
+        v["lt_debt_current"],
+        v["short_borrowings"],
+    )
+    if total is None:
+        if nc is None and cur is None:
+            if short is None:
+                return None
+            notes.append("deuda: solo se reportan préstamos de corto plazo")
+            return short
+        if nc is None or cur is None:
+            which = "deuda de largo plazo" if nc is None else "deuda de corto plazo"
+            notes.append(f"se tomó 0 de {which} porque la empresa no la reporta")
+        total = (nc or 0.0) + (cur or 0.0)
+    return total + (short or 0.0)
 
 
 def _missing(year: Year, keys: list[str]) -> list[str]:
@@ -207,6 +245,7 @@ class Wacc(StrictModel):
     inputs: dict[str, float | None]
     assumptions: list[str]
     missing: list[str]
+    note: str | None = None
 
 
 class ForensicResponse(StrictModel):
@@ -215,6 +254,7 @@ class ForensicResponse(StrictModel):
     sic: int | None
     sic_description: str | None
     altman_variant: Literal["original", "Z''"]
+    financial_note: str | None = None
     years: list[YearScores]  # el más reciente primero
     pe: PeStats
     wacc: Wacc
@@ -312,6 +352,17 @@ def beneish(cur: Year, prev: Year | None) -> ScoreResult:
 
 def is_manufacturer(sic: int | None) -> bool:
     return sic is not None and 2000 <= sic <= 3999
+
+
+def is_financial(sic: int | None) -> bool:
+    """Bancos, aseguradoras y financieras (SIC 6000–6799)."""
+    return sic is not None and 6000 <= sic <= 6799
+
+
+FINANCIAL_NOTE = (
+    "Empresa financiera: Beneish, Altman, ROIC y WACC son para empresas no financieras "
+    "(en un banco la deuda y los intereses son la materia prima del negocio): no se calculan."
+)
 
 
 def altman(year: Year, market_cap: float | None, manufacturer: bool) -> ScoreResult:
@@ -559,11 +610,26 @@ def pe_stats(prices: PriceSeries, shares: list[SharesPoint], ttm: list[TtmPoint]
 
 
 def wacc(
-    year: Year | None, market_cap: float | None, beta: float | None, rf: float | None, erp: float
+    year: Year | None,
+    market_cap: float | None,
+    beta: float | None,
+    rf: float | None,
+    erp: float,
+    financial: bool = False,
 ) -> Wacc:
     """Ke = tasa libre + beta × prima de riesgo; Kd = intereses / deuda; pesos a valor de mercado
     para el patrimonio y contable para la deuda."""
     assumptions = [f"prima de riesgo del mercado: {erp:.1f} % (editable)"]
+    if financial:
+        return Wacc(
+            value=None,
+            roic=None,
+            spread=None,
+            inputs={},
+            assumptions=[],
+            missing=[],
+            note="no aplica a bancos y financieras",
+        )
     missing: list[str] = []
     if beta is None:
         missing.append("beta contra el S&P 500")
@@ -592,9 +658,16 @@ def wacc(
     if t is None:
         t = STATUTORY_TAX
         assumptions.append("tasa de impuesto: 21 % (federal; la efectiva no se pudo calcular)")
-    debt = year.get("debt") or 0.0
-    if year.get("debt") is None:
-        assumptions.append("deuda financiera no reportada: se tomó 0")
+    debt = year.get("debt")
+    if debt is None:
+        return Wacc(
+            value=None,
+            roic=None,
+            spread=None,
+            inputs=inputs,
+            assumptions=assumptions,
+            missing=["deuda financiera"],
+        )
     interest = year.get("interest")
     ke = (rf + beta * erp) / 100
     kd = interest / debt if interest is not None and debt > 0 else None
@@ -654,6 +727,7 @@ class ForensicService:
         years = build_years(facts)
         shares = shares_history(facts)
         manufacturer = is_manufacturer(company.sic)
+        financial = is_financial(company.sic)
 
         scored: list[YearScores] = []
         for i, y in enumerate(years):
@@ -684,9 +758,10 @@ class ForensicService:
             sic=company.sic,
             sic_description=company.sic_description,
             altman_variant="original" if manufacturer else "Z''",
+            financial_note=FINANCIAL_NOTE if financial else None,
             years=scored,
             pe=pe,
-            wacc=wacc(years[0] if years else None, current_mcap, beta, rf, erp),
+            wacc=wacc(years[0] if years else None, current_mcap, beta, rf, erp, financial),
             sources=[
                 SourceInfo(
                     name=sec.SOURCE,

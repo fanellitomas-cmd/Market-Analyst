@@ -76,6 +76,7 @@ export function ForensicView({ ticker }: { ticker: string }) {
             {data.sic ? `SIC ${data.sic}${data.sic_description ? ` · ${data.sic_description}` : ""}` : ""}
           </span>
         </div>
+        {data.financial_note && <div className="notice">{data.financial_note}</div>}
         {last ? (
           <div className="tiles tiles-wide">
             <div className="tile" title={scoreTitle(last.beneish)}>
@@ -235,6 +236,7 @@ export function ForensicView({ ticker }: { ticker: string }) {
               Recalcular
             </button>
           </form>
+          {w.note && <div className="notice">WACC: {w.note}.</div>}
           {w.missing.length > 0 && <div className="notice warn">Falta: {w.missing.join(", ")}.</div>}
           <table className="tabular">
             <tbody>
