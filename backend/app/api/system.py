@@ -15,7 +15,6 @@ from app.core.db import JobRun, NotificationLog, SystemState, utcnow
 from app.domain import StrictModel
 
 router = APIRouter(prefix="/system", tags=["system"])
-WORKER_STALE_AFTER = timedelta(minutes=3)
 
 
 def get_services(request: Request) -> Services:
@@ -125,7 +124,8 @@ async def status(_: CurrentUser, services: ServicesDep) -> SystemStatus:
         timezone=services.settings.agent_timezone,
         now=now,
         worker_last_heartbeat=last_hb,
-        worker_alive=last_hb is not None and utcnow() - last_hb < WORKER_STALE_AFTER,
+        worker_alive=last_hb is not None
+        and utcnow() - last_hb < timedelta(minutes=services.settings.agent_heartbeat_stale_minutes),
         notifier_channel=services.notifier.channel.name,
         notifier_configured=services.notifier.configured,
         jobs=jobs,

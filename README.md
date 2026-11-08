@@ -73,7 +73,7 @@ Tareas actuales (lista de seguimiento = tickers con tesis activas + lista de opc
   cuando una empresa entra al filtro.
 - **Latido semanal** (lunes 08:00): confirma que el agente sigue vivo, con un resumen de la semana.
 
-Para instalarlo en tu PC o en un servidor gratuito, ver **[DEPLOY.md](DEPLOY.md)**.
+Para instalarlo en tu PC o en un servidor gratuito, ver **[DEPLOY.md](DEPLOY.md)** (incluye una opción sin servidor ni tarjeta: Render + Neon + GitHub Actions).
 
 ## Estructura
 

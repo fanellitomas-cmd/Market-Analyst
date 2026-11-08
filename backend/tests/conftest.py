@@ -1,7 +1,9 @@
 """Fixtures: la app se arma con un transporte HTTP simulado, así los tests nunca salen a la red."""
 
+import asyncio
 import json
 import math
+import os
 import tempfile
 import uuid
 from collections.abc import AsyncIterator, Callable, Sequence
@@ -14,10 +16,12 @@ import pytest
 from fastapi import FastAPI
 
 from app.core.config import Settings
+from app.core.db import Base, make_engine
 from app.core.security import hash_password
 from app.main import create_app
 
 PASSWORD = "una-clave-de-prueba"
+TEST_DATABASE_URL = os.environ.get("TEST_DATABASE_URL", "")
 Handler = Callable[[httpx.Request], httpx.Response]
 
 
@@ -39,8 +43,10 @@ def make_settings(**overrides: Any) -> Settings:
         "forexfactory_base_url": "https://ff.test",
         "okx_base_url": "https://okx.test",
         "cboe_base_url": "https://cboe.test",
-        # Una base nueva por app de test, en el directorio temporal del sistema.
-        "database_url": f"sqlite+aiosqlite:///{tempfile.gettempdir()}/ma-test-{uuid.uuid4().hex}.db",
+        # Una base nueva por app de test, en el directorio temporal del sistema. Con
+        # TEST_DATABASE_URL (un Postgres de prueba) se usa esa base, vaciada antes de cada test.
+        "database_url": TEST_DATABASE_URL
+        or f"sqlite+aiosqlite:///{tempfile.gettempdir()}/ma-test-{uuid.uuid4().hex}.db",
     }
     base.update(overrides)
     return Settings(_env_file=None, **base)
@@ -104,6 +110,20 @@ class Router:
             if fragment in url:
                 return handler(request)
         return httpx.Response(599, text=f"sin ruta simulada para {url}")
+
+
+@pytest.fixture(autouse=True)
+def _fresh_postgres() -> None:
+    if not TEST_DATABASE_URL:
+        return
+
+    async def reset() -> None:
+        engine = make_engine(TEST_DATABASE_URL)
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.drop_all)
+        await engine.dispose()
+
+    asyncio.run(reset())
 
 
 def pytest_sessionfinish(session: pytest.Session, exitstatus: int) -> None:

@@ -1,0 +1,58 @@
+# Agente de Market Analyst sin servidor propio: cada 15 minutos ejecuta las tareas
+# programadas que correspondan (pre-market, alertas intradía, cierre...) y manda los avisos
+# por WhatsApp. Ver DEPLOY.md, "Opción gratuita sin tarjeta".
+#
+# Sólo corre si el secreto DATABASE_URL está cargado (Settings → Secrets and variables →
+# Actions), así no falla en copias del repositorio que no lo usan.
+name: Agente
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"  # en UTC; los horarios de cada tarea están en hora de Buenos Aires
+  workflow_dispatch: {}      # botón "Run workflow" para probarlo a mano
+
+permissions:
+  contents: read
+
+concurrency:
+  group: agente
+  cancel-in-progress: false
+
+jobs:
+  pasada:
+    runs-on: ubuntu-latest
+    timeout-minutes: 14
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      SEC_USER_AGENT: ${{ secrets.SEC_USER_AGENT }}
+      WHATSAPP_PHONE: ${{ secrets.WHATSAPP_PHONE }}
+      CALLMEBOT_APIKEY: ${{ secrets.CALLMEBOT_APIKEY }}
+    steps:
+      - name: Verificar configuración
+        id: config
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "Falta el secreto DATABASE_URL: no se ejecuta nada."
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.config.outputs.ok == 'true'
+
+      - uses: actions/setup-python@v5
+        if: steps.config.outputs.ok == 'true'
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/pyproject.toml
+
+      - name: Instalar
+        if: steps.config.outputs.ok == 'true'
+        run: pip install --quiet ./backend
+
+      - name: Ejecutar tareas pendientes
+        if: steps.config.outputs.ok == 'true'
+        working-directory: backend
+        run: python -m app.agent.tick

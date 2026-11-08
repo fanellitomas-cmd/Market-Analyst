@@ -55,6 +55,9 @@ class CallMeBotWhatsApp:
         # CallMeBot responde 200 con un HTML; los errores vienen como texto dentro del cuerpo.
         if response.status_code != 200 or "error" in body or "invalid" in body:
             snippet = " ".join(response.text.split())[:160]
+            for secret in (self._apikey, self._phone, self._phone.lstrip("+")):
+                if secret:  # que el número y la clave no queden en registros
+                    snippet = snippet.replace(secret, "***")
             raise NotifyError(
                 f"CallMeBot rechazó el mensaje (HTTP {response.status_code}): {snippet}"
             )

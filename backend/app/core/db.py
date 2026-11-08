@@ -1,5 +1,9 @@
-"""Base de datos local (SQLite) para lo que el sitio necesita recordar: corridas del agente,
-notificaciones enviadas y el latido del proceso en segundo plano.
+"""Base de datos para lo que el sitio necesita recordar: corridas del agente, notificaciones
+enviadas, tesis y el latido del proceso en segundo plano.
+
+Por defecto es un archivo SQLite local. En servidores sin disco persistente (Render, GitHub
+Actions) se usa Postgres: basta con poner en DATABASE_URL la dirección que da el proveedor
+(por ejemplo Neon, `postgresql://usuario:clave@host/base?sslmode=require`).
 
 Las tablas se crean al arrancar (`init_db`). Cuando haya que cambiar una tabla existente, se
 agrega Alembic para migrar sin perder datos.
@@ -7,6 +11,8 @@ agrega Alembic para migrar sin perder datos.
 
 from datetime import UTC, date, datetime
 from pathlib import Path
+from typing import Any
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from sqlalchemy import Boolean, Date, DateTime, Float, Integer, String, Text, UniqueConstraint
 from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker, create_async_engine
@@ -160,7 +166,33 @@ class TriggerLog(Base):
     stop: Mapped[str] = mapped_column(Text)
 
 
+# Parámetros de libpq (los que traen las URLs de Neon, Supabase, etc.) que asyncpg no acepta.
+_LIBPQ_ONLY = {"sslmode", "channel_binding", "sslrootcert", "target_session_attrs"}
+
+
+def postgres_engine_args(url: str) -> tuple[str, dict[str, Any]]:
+    """Convierte una URL de Postgres "estándar" en una para SQLAlchemy + asyncpg.
+
+    `postgres://` y `postgresql://` pasan a `postgresql+asyncpg://`, y `sslmode=require` (que
+    asyncpg no entiende como parámetro) se traduce a `ssl=True` en los argumentos de conexión.
+    """
+    parts = urlsplit(url)
+    scheme = "postgresql+asyncpg"
+    query = parse_qsl(parts.query, keep_blank_values=True)
+    sslmode = next((v for k, v in query if k == "sslmode"), None)
+    kept = [(k, v) for k, v in query if k not in _LIBPQ_ONLY]
+    clean = urlunsplit((scheme, parts.netloc, parts.path, urlencode(kept), parts.fragment))
+    connect_args: dict[str, Any] = {}
+    if sslmode in {"require", "verify-ca", "verify-full"}:
+        connect_args["ssl"] = True
+    return clean, connect_args
+
+
 def make_engine(url: str) -> AsyncEngine:
+    if url.startswith(("postgres://", "postgresql://", "postgresql+asyncpg://")):
+        clean, connect_args = postgres_engine_args(url)
+        # pool_pre_ping: las bases gratuitas "duermen" y cortan conexiones inactivas.
+        return create_async_engine(clean, connect_args=connect_args, pool_pre_ping=True)
     if url.startswith("sqlite") and ":///" in url:
         path = url.split(":///", 1)[1]
         if path and path != ":memory:":

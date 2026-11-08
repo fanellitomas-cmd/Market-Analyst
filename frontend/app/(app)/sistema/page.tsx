@@ -111,7 +111,7 @@ export default function SistemaPage() {
               <p className="muted" style={{ margin: 0 }}>
                 {data.notifier_configured
                   ? "Las alertas llegan a tu número a través de CallMeBot."
-                  : "Completá WHATSAPP_PHONE y CALLMEBOT_APIKEY en backend/.env. Mientras tanto, los avisos quedan registrados acá abajo."}
+                  : "Completá WHATSAPP_PHONE y CALLMEBOT_APIKEY (en backend/.env, o en Render y en los secretos de GitHub). Mientras tanto, los avisos quedan registrados acá abajo."}
               </p>
               <div>
                 <button
