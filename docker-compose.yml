@@ -1,0 +1,34 @@
+# Market Analyst completo: API, agente 24/7 y sitio web.
+#   1. Copiá backend/.env.example a backend/.env y completalo.
+#   2. docker compose up -d --build
+#   3. Abrí http://localhost:3000
+# La base SQLite queda en ./data (se conserva entre reinicios y actualizaciones).
+
+x-backend: &backend
+  build: ./backend
+  env_file: ./backend/.env
+  environment:
+    DATABASE_URL: sqlite+aiosqlite:////app/data/market_analyst.db
+  volumes:
+    - ./data:/app/data
+  restart: unless-stopped
+
+services:
+  api:
+    <<: *backend
+
+  worker:
+    <<: *backend
+    command: ["python", "-m", "app.worker"]
+
+  web:
+    build:
+      context: ./frontend
+      args:
+        BACKEND_URL: http://api:8000
+    depends_on:
+      - api
+    # Sólo accesible desde la propia máquina; para entrar desde el celular se usa Tailscale.
+    ports:
+      - "127.0.0.1:3000:3000"
+    restart: unless-stopped

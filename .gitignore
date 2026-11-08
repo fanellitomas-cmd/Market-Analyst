@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Node / Next.js
+node_modules/
+.next/
+next-env.d.ts
+*.tsbuildinfo
+
+# Secretos y entorno local
+.env
+.env.local
+backend/.env
+frontend/.env.local
+
+.DS_Store
+
+# Base de datos local del agente
+backend/data/
+*.db
+
+# Docker
+data/
