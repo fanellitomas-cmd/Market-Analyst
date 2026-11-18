@@ -1,0 +1,34 @@
+# Blueprint de Render: el sitio y la API en un servicio web gratuito.
+# El agente corre en GitHub Actions y la base de datos en Neon. Ver DEPLOY.md.
+services:
+  - type: web
+    name: market-analyst
+    runtime: docker
+    plan: free
+    dockerfilePath: ./deploy/render/Dockerfile
+    dockerContext: .
+    healthCheckPath: /login
+    autoDeploy: true
+    envVars:
+      # Secretos: Render los pide al crear el servicio (no quedan en el repositorio).
+      - key: DATABASE_URL
+        sync: false
+      - key: APP_USERNAME
+        sync: false
+      # La contraseña del sitio (al menos 10 caracteres); se guarda sólo como hash en memoria.
+      - key: APP_PASSWORD
+        sync: false
+      - key: SEC_USER_AGENT
+        sync: false
+      - key: WHATSAPP_PHONE
+        sync: false
+      - key: CALLMEBOT_APIKEY
+        sync: false
+      # Secreto de las sesiones: lo genera Render, al azar.
+      - key: JWT_SECRET
+        generateValue: true
+      # Configuración fija.
+      - key: COOKIE_SECURE
+        value: "true"
+      - key: AGENT_HEARTBEAT_STALE_MINUTES
+        value: "60"
